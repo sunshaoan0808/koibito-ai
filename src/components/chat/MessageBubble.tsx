@@ -42,6 +42,11 @@ interface MessageBubbleProps {
   isHighlighted?: boolean
   /** SFX-burst policy for this message's speaker (global toggle + their `sfxWords`). */
   sfx?: SfxConfig
+  /**
+   * Speaker-stripe colour for the VN backlog's translucent log (`text/speakerTint`). Undefined in
+   * the classic transcript, which keeps its own look — this is additive, not a restyle.
+   */
+  tint?: string
   // Every callback below takes this message's own id as its first argument, rather than
   // `MessageLog` pre-binding a fresh `() => onX(m.id)` closure per message per render — the whole
   // point of wrapping this component in `memo` below is to skip re-rendering a bubble whose props
@@ -66,6 +71,7 @@ export const MessageBubble = memo(function MessageBubble({
   streamingText,
   isHighlighted,
   sfx,
+  tint,
   onEdit,
   onDelete,
   onRewind,
@@ -212,6 +218,7 @@ export const MessageBubble = memo(function MessageBubble({
   ) : (
     <div
       onClick={startEdit}
+      style={tint ? { boxShadow: `inset 2px 0 0 0 ${tint}`, paddingLeft: 8 } : undefined}
       className={`prose-rp whitespace-pre-wrap break-words text-sm leading-relaxed ${clickToEdit ? 'cursor-text' : ''}`}
     >
       {showFailedIndicator ? (

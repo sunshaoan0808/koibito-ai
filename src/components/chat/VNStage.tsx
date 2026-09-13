@@ -992,6 +992,7 @@ export function VNStage({
             character={character}
             persona={persona}
             participantCharacters={participantCharacters}
+            tintSpeakers
             generatingMessageId={generatingMessageId}
             streamingText={streamingText}
             highlightedMessageId={highlightedMessageId}

@@ -4,6 +4,7 @@ import type { WorldCard } from '@/lib/types'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { useAudioDuckStore } from '@/lib/store/useAudioDuckStore'
 import { resolveBgmTrack } from '@/lib/audio/bgm'
+import { absoluteUrl } from '@/lib/audio/absoluteUrl'
 
 const CROSSFADE_MS = 1400
 const STEP_MS = 40
@@ -44,7 +45,7 @@ export function BgmPlayer({ world, scene }: { world?: WorldCard; scene?: SceneTa
       if (track) {
         s.activeIsA = !s.activeIsA
         const incoming = s.activeIsA ? a : b
-        if (incoming.src !== absolute(track)) {
+        if (incoming.src !== absoluteUrl(track)) {
           incoming.src = track
           incoming.volume = 0
           try {
@@ -105,14 +106,6 @@ export function BgmPlayer({ world, scene }: { world?: WorldCard; scene?: SceneTa
 }
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v))
-
-function absolute(url: string): string {
-  try {
-    return new URL(url, window.location.href).href
-  } catch {
-    return url
-  }
-}
 
 /**
  * `.play()` rejects until the page has had a user gesture. Retry once on the next global

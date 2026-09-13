@@ -5,6 +5,7 @@ import type { Persona } from '@/lib/types'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { parseSfxWordList } from '@/lib/text/messageSegments'
 import { sfxConfigFor } from '@/lib/text/sfx'
+import { speakerSeed, speakerTint } from '@/lib/text/speakerTint'
 import { MessageBubble } from './MessageBubble'
 
 interface MessageLogProps {
@@ -13,6 +14,8 @@ interface MessageLogProps {
   persona?: Persona
   /** Other characters able to speak in this chat (group scenes) — [] for an ordinary single-character chat. */
   participantCharacters?: Character[]
+  /** Give each speaker a colour stripe in the translucent log — the VN backlog asks for this (P3 Tier 6). */
+  tintSpeakers?: boolean
   generatingMessageId: string | null
   streamingText: string
   /** Message id to briefly flash, set when the user jumps here from search or the pinned panel. */
@@ -34,6 +37,7 @@ export function MessageLog({
   character,
   persona,
   participantCharacters = [],
+  tintSpeakers = false,
   generatingMessageId,
   streamingText,
   highlightedMessageId,
@@ -67,10 +71,21 @@ export function MessageLog({
                 ? character?.avatarDataUrl
                 : (participantCharacters.find((c) => c.id === m.speakerId)?.avatarDataUrl ?? character?.avatarDataUrl)
           const sfx = sfxConfigFor(m, { enabled: sfxEnabled, globalWords: globalSfxWords, primary: character, participants: participantCharacters })
-          return [m.id, { avatarDataUrl, sfx }]
+          // One colour per speaker, keyed by name so a rename follows the character and a reload
+          // never shuffles the palette (see `text/speakerTint`). Only the VN backlog asks for it.
+          const tint = tintSpeakers
+            ? speakerTint(
+                speakerSeed({
+                  role: m.role,
+                  speakerName: m.speakerId ? participantCharacters.find((c) => c.id === m.speakerId)?.card.name : undefined,
+                  fallbackName: character?.card.name,
+                }),
+              )
+            : undefined
+          return [m.id, { avatarDataUrl, sfx, tint }]
         }),
       ),
-    [messages, persona, character, participantCharacters, sfxEnabled, globalSfxWords],
+    [messages, persona, character, participantCharacters, sfxEnabled, globalSfxWords, tintSpeakers],
   )
 
   return (
@@ -81,6 +96,7 @@ export function MessageLog({
           message={m}
           avatarDataUrl={perMessage.get(m.id)?.avatarDataUrl}
           sfx={perMessage.get(m.id)?.sfx}
+          tint={perMessage.get(m.id)?.tint}
           isStreaming={generatingMessageId === m.id}
           // Only the bubble actually streaming needs the live text — handing every other bubble
           // the same ever-changing string would force all of them to re-render on every token
