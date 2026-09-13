@@ -19,6 +19,7 @@ python3 tools/audit/scan_cjk_pollution.py
 
 # 规模基线（文件/行数/测试/事件池/模块数）
 python3 tools/audit/count_scale.py
+python3 tools/audit/count_chaos_pool.py --check
 
 # 缺口复核：13 项机制是否已实现
 python3 tools/audit/check_gaps.py
@@ -35,6 +36,7 @@ python3 tools/audit/scan_checkboxes.py                # 全库未勾选分布
 | `check_pre_commit.py` | 发现幽灵路径引用或敏感串 → **不要提交** |
 | `check_doc_refs.py` | 文档引用了不存在的路径 |
 | `scan_cjk_pollution.py` | 中文文案混入英文单词 |
+| `count_chaos_pool.py --check` | 命运轮盘不达 P1-3 配额（总 / 风味 / spicy / 重复文案） |
 | 其余 | 恒为 0（只做报告） |
 
 ## 敏感值清单（本地私有，不入库）
