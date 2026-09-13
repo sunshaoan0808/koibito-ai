@@ -19,3 +19,7 @@ tools/comfy/backups/
 
 # Local Comfy MCP registration — hardcodes this machine's absolute paths (see tools/comfy/README.md)
 .mcp.json
+
+# Generated PWA service-worker output (rebuilt by vite-plugin-pwa on every dev/build run)
+dev-dist
+
