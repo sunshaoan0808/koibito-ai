@@ -12,10 +12,10 @@
 | 动作 | 内容 |
 |---|---|
 | ❌ 删除幽灵项 | 旧版 22 个未勾选项里，有 5 类引用了**不存在的文件**（`src/lib/journal.ts`、`chaos-events.ts`、`JournalPanel.tsx`、`relationshipValidator.ts`、`characterCard.ts`），已全部按真实落点重写或删除 |
-| 🔢 修正数字 | 测试"800+"→ **116 文件 / ~2,156 用例**（P1-1 交付后为 **117 文件 / 2,170 用例**；P1-2 交付后为 **117 文件 / 2,191 用例**）；Chaos 事件"24 个"→ **70 条**；i18n 从"待做"→ **已完成**；`strict: true` 从"待开启"→ **已开启** |
+| 🔢 修正数字 | 测试"800+"→ **116 文件 / ~2,156 用例**（P1-1 交付后为 **117 文件 / 2,170 用例**；P1-2 交付后为 **117 文件 / 2,191 用例**；P1-3 交付后为 **117 文件 / 2,192 用例**）；Chaos 事件"24 个"→ **152 条**（P1-3 扩容后实测，`tools/audit/count_chaos_pool.py`）；i18n 从"待做"→ **已完成**；`strict: true` 从"待开启"→ **已开启** |
 | ✅ 删除已解决项 | 移动端适配（`RelationshipPanel` 已响应式）、日记虚拟滚动（无该组件，前提不成立）、STT（`voice/stt.ts`+`vad.ts`+`dictation.ts` 已实现）、类型严格化（已开） |
 | ➕ 新增真实缺口 | 来自 2026-09-13 代码对账的 P1/P2 项（成长回写、时间流逝、Chaos 扩容、TTS 通道、Clock In、小时天气、EPUB、斜杠命令、聊天内生图、动态 NPC、记忆去重、BYAF/JSONL） |
-| ✅ 落地 | 旧版唯一真实待办 `exportWithGrowth()` 成长回写 → **P1-1 已完成**（`19f1111`）；自动时间流逝 → **P1-2 已完成**（`b607209`） |
+| ✅ 落地 | 旧版唯一真实待办 `exportWithGrowth()` 成长回写 → **P1-1 已完成**（`19f1111`）；自动时间流逝 → **P1-2 已完成**（`b607209`）；Chaos 事件池扩容 → **P1-3 已完成**（`38bb4c6`） |
 
 > **旧版 `DEVELOPMENT_PLAN.md` 的 Phase 1 里有 2 项"已完成但被写成未完成"**（移动端、虚拟滚动），照旧版干活会重复劳动——本版已清除。
 
@@ -34,7 +34,7 @@
 
 **本仓库相对上游新增**（`PROJECT_SUMMARY.md` §5）：口令鉴权 + 服务端 LLM 代理、PWA、局域网多设备、i18n（zh 218 条）、系统提示词中文化、Sumire 卡汉化、FP 机制吸收 11 项。
 
-> ⚠️ 不要再"实现"以下已被误报为待办的东西：**i18n**、**STT**、**移动端响应式**、**`strict: true`**、**日记物理引擎**（在 `realism/engine.ts:440–527`）、**命运轮盘**（70 条已在 `:310–387`）、**关系判定器**（`dating/relationshipAssist.ts`）。
+> ⚠️ 不要再"实现"以下已被误报为待办的东西：**i18n**、**STT**、**移动端响应式**、**`strict: true`**、**日记物理引擎**（在 `realism/engine.ts:440–527`）、**命运轮盘**（152 条已在 `:312–471`）、**关系判定器**（`dating/relationshipAssist.ts`）。
 
 ---
 
@@ -55,7 +55,7 @@
 |---|---|---|---|---|
 | **P1-1 ✅(`19f1111`)** | **成长回写角色卡（AI Enhance）**：把养出来的年轮/关系/心结烘焙进卡，导出即可带走 | 已落地 `src/lib/characters/exportWithGrowth.ts`（纯函数 `buildGrowthSnapshot` 等 + `loadGrowthSnapshot` 取数层）；`cardSpec.ts` 的 `extensions` 透传（:286 / :323 / :340）承接快照；年轮数据来自 `realism/engine.ts` | 导出 JSON 含 `extensions.rp_growth`（年轮/日记/关系阶段/心结/关键记忆）；重新导入后 `readGrowth` 可回读；**14 个单测**；导出 UI 有开关（默认关）+ 规模预览 | 已交付 |
 | **P1-2 ✅(`b607209`)** | **自动时间流逝**：按一轮叙事时长推导推进时段，日历/精力/日记时间戳联动；OOC 可跳时 | 已落地 `src/lib/world/calendar.ts`（`deriveElapsedPhases` / `reasonedAdvance` / `MAX_DERIVED_PHASES` / `MAX_DERIVED_DAYS` + `detectNarratedPhaseMatch` 拆出以复用命中位置）；挂点 `useChatSession.ts` 回合发送处（紧跟原有 per-chat `scene.timePhase` 覆盖块）；开关 `useSettingsStore.autoAdvanceTime`（默认开，Settings → Generation → World clock）；顺带修复 `nextRealism` 把 `journal` 整个丢掉、日记从不写入的缺陷（`realism/engine.ts`），日记条目新增 `atDay`/`atPhase` 世界钟戳记 | 每回合推进 0~3 时段且可解释（`reasonedAdvance().note` 进 toast）；日历/精力/日记三者一致（精力由 `getEnergyRemaining(day, phaseIndex)` 从钟派生，戳记取发送时新读的钟）；"关闭自动推进"开关；**21 个新单测**覆盖深夜/跨日/跨季跨年/0 段/跳日/同日后指 | 已交付 |
-| **P1-3** | **Chaos 事件池扩容** 70 → 150+ | `src/lib/realism/engine.ts:310–387` | 实测条数 ≥150；五风味各 ≥24；`spicy` 提至 ≥30；无重复文案；`engine.test.ts` 全绿 | 1 天 |
+| **P1-3 ✅(`38bb4c6`)** | **Chaos 事件池扩容** 70 → 150+ | 已落地 `src/lib/realism/engine.ts:312–471`（原 60 条 + 10 条 spicy，扩至 **152 条 / 31 条 spicy**）；新审计脚本 `tools/audit/count_chaos_pool.py`（风味配额 + 归一化查重 + `--check` 退出码） | 实测 **152 条 ≥150**；五风味 **27 / 27 / 32 / 34 / 32 各 ≥24**；`spicy` **31 ≥30**；归一化查重 **0 组**；`engine.test.ts` 新增配额守卫用例，全绿 | 已交付 |
 | **P1-4** | **TTS 通道打通**（配置侧，非写码） | 前端 `src/lib/voice/cloudTts.ts:43` 已打 `/api/llm/v1/audio/speech`；需在自己的网关上开 TTS 路由 | 设置页"语音"测试按钮出声；长文按 `sentenceChunker` 分句、不截断；`VoiceSettings` 各 provider 可切换 | 0.5 天（取决于网关） |
 
 ### P2 — 体验与竞争对齐（≈4 周）
@@ -170,6 +170,7 @@
 | `tools/audit/check_doc_refs.py` | 文档引用的每个路径是否真实存在（黑名单与「计划路径」自动放行） |
 | `tools/audit/scan_cjk_pollution.py` | 中文文案英文残渣 + **GBK 误码/乱码**扫描（**建议纳入 CI**） |
 | `tools/audit/count_scale.py` | 规模基线：文件 / 行数 / 测试用例 / 事件池 / 模块数 |
+| `tools/audit/count_chaos_pool.py` | 命运轮盘逐风味配额 + 归一化查重 + `--check` 验收（P1-3 口径） |
 | `tools/audit/check_gaps.py` | **缺口复核**：P1/P2 各项机制是否已实现（OK / GAP） |
 | `tools/audit/dump_open_items.py` | TODO.md / ROADMAP.md 未勾项 + 所属分组 |
 | `tools/audit/scan_checkboxes.py` | 全库未勾选复选框分布统计 |
