@@ -23,3 +23,6 @@ tools/comfy/backups/
 # Generated PWA service-worker output (rebuilt by vite-plugin-pwa on every dev/build run)
 dev-dist
 
+# 本地私有敏感值清单（一行一个真实口令/域名，不随仓库公开）
+tools/audit/secrets.local.txt
+
