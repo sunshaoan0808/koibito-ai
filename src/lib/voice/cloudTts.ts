@@ -27,6 +27,23 @@ export function ttsConfig(): { model: string; voice: string } {
   }
 }
 
+/** The raw clip for one sentence: the same endpoint `speakMessage` streams from, minus playback. Used
+ *  by the audiobook export, which needs bytes to join rather than a sound to play. */
+export async function synthesizeSpeechClip(text: string, signal?: AbortSignal): Promise<Uint8Array> {
+  const { model, voice } = ttsConfig()
+  const res = await fetch('/api/llm/v1/audio/speech', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, voice, input: text }),
+    signal,
+  })
+  if (!res.ok) {
+    const detail = (await res.text().catch(() => '')).slice(0, 160)
+    throw new Error(`语音生成失败 (${res.status})${detail ? `：${detail}` : ''}`)
+  }
+  return new Uint8Array(await res.arrayBuffer())
+}
+
 /** Plays `text` for `messageId`; resolves true when playback started, false when stopped. */
 export async function speakMessage(
   messageId: string,

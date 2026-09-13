@@ -19,6 +19,7 @@ import {
   Star,
   Sunrise,
   Target,
+  Volume2,
   Wrench,
   X,
 } from 'lucide-react'
@@ -30,12 +31,14 @@ import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { scrollToMessage } from '@/lib/scrollToMessage'
 import { buildChatTranscriptHtml, chatTranscriptFilename, downloadChatTranscript } from '@/lib/export/chatTranscript'
 import { chatJsonlFilename, downloadChatJsonl, serializeChatJsonl } from '@/lib/export/chatJsonl'
-import { buildChatEpub, chatEpubFilename, downloadChatEpub } from '@/lib/export/epub'
+import { buildChatEpub, buildChatChapters, chatEpubFilename, downloadChatEpub } from '@/lib/export/epub'
+import { audiobookFilename, downloadAudiobook, narrateChapters, type NarrationProgress } from '@/lib/voice/audiobook'
+import { synthesizeSpeechClip } from '@/lib/voice/cloudTts'
 import { appendImage, generateTurnImage } from '@/lib/image/turnImage'
 import type { SlashOutcome } from '@/lib/chat/slashCommands'
 import { parseSfxWordList } from '@/lib/text/messageSegments'
 import { useBgmSceneStore } from '@/lib/store/useBgmSceneStore'
-import { errorMessage, toastError } from '@/lib/store/useToastStore'
+import { errorMessage, toastError, toastInfo } from '@/lib/store/useToastStore'
 import { getEnergyRemaining, PHASES, presenceLabel, resolveScheduledPresence } from '@/lib/world/calendar'
 import { getWorldTemplate } from '@/lib/world/worldTemplates'
 import {
@@ -227,6 +230,8 @@ export function ChatWindow({
   const [armedIntimacyOptionId, setArmedIntimacyOptionId] = useState<string | null>(null)
   const [refreshingChoices, setRefreshingChoices] = useState(false)
   const [exporting, setExporting] = useState(false)
+  // P2-3's audiobook half: narration runs sentence by sentence, so the button carries the count.
+  const [audioProgress, setAudioProgress] = useState<NarrationProgress | null>(null)
   // VN quick menu's Auto toggle — off by default, never persisted, and reset below on every chat
   // switch, so it can never silently keep running somewhere the user forgot about. See
   // `handleAutoAdvanceFire`'s own doc comment for the rest of the safety rails.
@@ -369,6 +374,36 @@ export function ChatWindow({
       )
     } catch (e) {
       toastError(errorMessage(e))
+    }
+  }
+
+  // P2-3's audiobook half: narrate the transcript the EPUB export already renders, into one MP3.
+  // It reads the same chapters (so book and narration never disagree) and synthesizes through the
+  // app's own TTS proxy — which needs a configured voice, so a missing upstream is a real error
+  // rather than a silent empty file.
+  const exportAudiobook = async () => {
+    if (!chat || audioProgress) return
+    const chapters = buildChatChapters(messages ?? []).map((chapter) => ({
+      title: chapter.title,
+      paragraphs: chapter.messages.flatMap((message) => message.text.split(/\n+/)),
+    }))
+    setAudioProgress({ done: 0, total: 0 })
+    try {
+      const result = await narrateChapters({
+        chapters,
+        synth: synthesizeSpeechClip,
+        onProgress: setAudioProgress,
+      })
+      downloadAudiobook(result.bytes, audiobookFilename(chat.title))
+      toastInfo(
+        result.skipped.length
+          ? `有声书已导出（${result.clips} 段，${result.skipped.length} 段合成失败已跳过）`
+          : `有声书已导出（${result.clips} 段）`,
+      )
+    } catch (e) {
+      toastError(errorMessage(e))
+    } finally {
+      setAudioProgress(null)
     }
   }
 
@@ -550,6 +585,15 @@ export function ChatWindow({
     },
     { key: 'export-jsonl', icon: FileJson, label: 'Export as SillyTavern JSONL', onClick: exportJsonl },
     { key: 'export-epub', icon: BookOpen, label: 'Export as EPUB', onClick: exportEpub },
+    {
+      key: 'export-audio',
+      icon: Volume2,
+      label: audioProgress
+        ? `Exporting audio… ${audioProgress.done}${audioProgress.total ? `/${audioProgress.total}` : ''}`
+        : 'Export audiobook (MP3)',
+      disabled: !!audioProgress,
+      onClick: exportAudiobook,
+    },
     // P2-6: guests the scene invented, offered as candidates — nothing is created until the writer
     // clicks promote, and the whole panel is inert while the setting is off.
     { key: 'cast', icon: Drama, label: 'Dynamic cast', onClick: () => setShowCast(true) },
