@@ -56,7 +56,7 @@
 | **P1-1 ✅(`19f1111`)** | **成长回写角色卡（AI Enhance）**：把养出来的年轮/关系/心结烘焙进卡，导出即可带走 | 已落地 `src/lib/characters/exportWithGrowth.ts`（纯函数 `buildGrowthSnapshot` 等 + `loadGrowthSnapshot` 取数层）；`cardSpec.ts` 的 `extensions` 透传（:286 / :323 / :340）承接快照；年轮数据来自 `realism/engine.ts` | 导出 JSON 含 `extensions.rp_growth`（年轮/日记/关系阶段/心结/关键记忆）；重新导入后 `readGrowth` 可回读；**14 个单测**；导出 UI 有开关（默认关）+ 规模预览 | 已交付 |
 | **P1-2 ✅(`b607209`)** | **自动时间流逝**：按一轮叙事时长推导推进时段，日历/精力/日记时间戳联动；OOC 可跳时 | 已落地 `src/lib/world/calendar.ts`（`deriveElapsedPhases` / `reasonedAdvance` / `MAX_DERIVED_PHASES` / `MAX_DERIVED_DAYS` + `detectNarratedPhaseMatch` 拆出以复用命中位置）；挂点 `useChatSession.ts` 回合发送处（紧跟原有 per-chat `scene.timePhase` 覆盖块）；开关 `useSettingsStore.autoAdvanceTime`（默认开，Settings → Generation → World clock）；顺带修复 `nextRealism` 把 `journal` 整个丢掉、日记从不写入的缺陷（`realism/engine.ts`），日记条目新增 `atDay`/`atPhase` 世界钟戳记 | 每回合推进 0~3 时段且可解释（`reasonedAdvance().note` 进 toast）；日历/精力/日记三者一致（精力由 `getEnergyRemaining(day, phaseIndex)` 从钟派生，戳记取发送时新读的钟）；"关闭自动推进"开关；**21 个新单测**覆盖深夜/跨日/跨季跨年/0 段/跳日/同日后指 | 已交付 |
 | **P1-3 ✅(`38bb4c6`)** | **Chaos 事件池扩容** 70 → 150+ | 已落地 `src/lib/realism/engine.ts:312–471`（原 60 条 + 10 条 spicy，扩至 **152 条 / 31 条 spicy**）；新审计脚本 `tools/audit/count_chaos_pool.py`（风味配额 + 归一化查重 + `--check` 退出码） | 实测 **152 条 ≥150**；五风味 **27 / 27 / 32 / 34 / 32 各 ≥24**；`spicy` **31 ≥30**；归一化查重 **0 组**；`engine.test.ts` 新增配额守卫用例，全绿 | 已交付 |
-| **P1-4** | **TTS 通道打通**（配置侧，非写码） | 前端 `src/lib/voice/cloudTts.ts:43` 已打 `/api/llm/v1/audio/speech`；需在自己的网关上开 TTS 路由 | 设置页"语音"测试按钮出声；长文按 `sentenceChunker` 分句、不截断；`VoiceSettings` 各 provider 可切换 | 0.5 天（取决于网关） |
+| **P1-4 ⏸️(挂起 2026-09-13，待定 TTS 上游)** | **TTS 通道打通**（配置侧，非写码） | 前端**已齐备**：`src/lib/voice/cloudTts.ts:43` 打 `/api/llm/v1/audio/speech`、`server/llmProxy.ts` 服务端注入 key、`components/settings/VoiceSettings.tsx` 有真试听按钮（合成+播放，非 ping）、`sentenceChunker` / `ttsProviders` 带测试。**卡点＝本机没有 TTS 上游**（2026-09-13 实测）：`data/config.json` 不存在（`llmBaseUrl`/`llmApiKey` 全空）；`:9527` zen 网关 64 个模型 0 命中；`:8317` CPA 列 0 条；`:8001` 是 grok2api、`:8021` 是 chatgpt-web-voice（非 OpenAI 兼容）；`edge-tts` 未装，5050/5002/9880/18080 全关 | 恢复条件：定下 TTS 上游后配 `data/config.json` 的 `llmBaseUrl`/`llmApiKey`，并把 `rp.ttsModel`/`rp.ttsVoice` 对齐真实音色；设置页试听出声即验收。三条候选：**A** 本机架免费 edge-tts 通道（推荐，零 key）/ **B** MiniMax TTS 加 key（代码默认模型即 `minimax-tts-speech-2.8-turbo`）/ **C** 外部网关 `{base_url, api_key, 模型名}` | 0.5 天（取决于网关） |
 
 ### P2 — 体验与竞争对齐（≈4 周）
 
@@ -64,7 +64,7 @@
 |---|---|---|---|---|
 | P2-1 | Clock In 职业班表：哪几天/几点上下班、跳回合横幅、迟到后果 | 地基 `Character.schedule` + `getCurrentActivity`；新增 `src/lib/world/workSchedule.ts` | 班表可编辑；到点出现上下班提示；跨周重复；与日计划精力互不冲突 | 2~3 天 |
 | P2-2 | 小时级天气引擎：日内变化、温度曲线、明日预报 | `src/lib/world/calendar.ts`（现仅时段级 `describeWeather`） | 同一时段内天气可变；预报命中率可测（确定性种子）；注入提示词的天气串随时间变化 | 1 周 |
-| P2-3 | EPUB 导出 + 有声书（TTS 串流成音频） | `src/lib/export/chatTranscript.ts`（已有 HTML 记录管线） | 导出的 epub 在 Apple Books / Calibre 可读、目录按章；有声书按消息分轨 | 2~3 天 |
+| P2-3 | EPUB 导出 + 有声书（TTS 串流成音频） | `src/lib/export/chatTranscript.ts`（已有 HTML 记录管线） | 导出的 epub 在 Apple Books / Calibre 可读、目录按章；有声书按消息分轨 | 2~3 天（EPUB 部分可独立交付；**有声书半边依赖 P1-4，现挂起**） |
 | P2-4 | 斜杠命令（`/image` `/skip` `/ooc` `/roll`…） | 复用命令面板（#74）的注册表与补全 | 聊天输入框内触发；与现有 OOC/分叉不冲突；有 `/help` 列表 | 3~5 天 |
 | P2-5 | 聊天内图片工作流：`/image`、图生图 Edit、即时场景快照 | 后端**齐备**：`api/{a1111,comfyui,swarmui,novelai,openMayhem}Image.ts` + `createImageBackend.ts` | 聊天中一句话出图并回显；图生图能引用上一条图片；失败有明确错误态 | 1 周 |
 | P2-6 | 动态客串 NPC：路人在场景中被自动创造并入戏 | 新增 cast detector；注意 `dating/sceneParticipants.ts` 是**亲密场景共享状态**，不是路人检测 | 群场景中临时角色可被"扶正"为常驻；不污染既有角色库；可关 | 1 周 |
