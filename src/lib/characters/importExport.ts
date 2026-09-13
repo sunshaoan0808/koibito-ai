@@ -1,4 +1,5 @@
 import { extractCardAssets, normalizeCardJson, wrapCardV2, type CharacterCardData } from './cardSpec'
+import { withGrowth, type GrowthSnapshot } from './exportWithGrowth'
 import type { CustomExpression } from '@/lib/vn/expressions'
 import { readCharacterFromPng, writeCharacterToPng } from './png'
 
@@ -47,11 +48,32 @@ export function downloadJson(card: CharacterCardData) {
   triggerDownload(blob, `${sanitizeFilename(card.name)}.json`)
 }
 
+/** P1-1 成长回写：带成长导出（把年轮/关系/心结烘焙进 `extensions.rp_growth`）。 */
+export function downloadJsonWithGrowth(card: CharacterCardData, snap: GrowthSnapshot) {
+  const blob = new Blob([JSON.stringify(wrapCardV2(withGrowth(card, snap)), null, 2)], {
+    type: 'application/json',
+  })
+  triggerDownload(blob, `${sanitizeFilename(card.name)}.json`)
+}
+
 export async function downloadPng(card: CharacterCardData, avatarDataUrl?: string) {
   const avatarBlob = avatarDataUrl
     ? await (await fetch(avatarDataUrl)).blob()
     : await blankAvatarBlob()
   const pngBlob = await writeCharacterToPng(avatarBlob, wrapCardV2(card))
+  triggerDownload(pngBlob, `${sanitizeFilename(card.name)}.png`)
+}
+
+/** P1-1 成长回写：带成长导出（PNG，成长走 tEXt chunk，ST 侧未知键忽略）。 */
+export async function downloadPngWithGrowth(
+  card: CharacterCardData,
+  snap: GrowthSnapshot,
+  avatarDataUrl?: string,
+) {
+  const avatarBlob = avatarDataUrl
+    ? await (await fetch(avatarDataUrl)).blob()
+    : await blankAvatarBlob()
+  const pngBlob = await writeCharacterToPng(avatarBlob, wrapCardV2(withGrowth(card, snap)))
   triggerDownload(pngBlob, `${sanitizeFilename(card.name)}.png`)
 }
 

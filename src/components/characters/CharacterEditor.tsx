@@ -15,7 +15,12 @@ import {
   detectVoiceFingerprint,
   type ReplyLength,
 } from '@/lib/characters/voice'
-import { downloadJson, downloadPng, fileToDataUrl, importCharacterFile } from '@/lib/characters/importExport'
+import { downloadJson, downloadPng, fileToDataUrl, importCharacterFile, downloadJsonWithGrowth, downloadPngWithGrowth } from '@/lib/characters/importExport'
+import {
+  describeGrowthSnapshot,
+  loadGrowthSnapshot,
+  type GrowthSnapshot,
+} from '@/lib/characters/exportWithGrowth'
 import { buildCharacterPack, downloadCharacterPack, importCharacterPack, parseCharacterPackFile } from '@/lib/characters/pack'
 import { DEFAULT_EXPRESSIONS, slugifyExpressionId, type CustomExpression } from '@/lib/vn/expressions'
 import { BASE_OUTFIT_ID, expressionIdsForOutfit, outfitCoverage, slugifyOutfitId, spriteKey, type Outfit } from '@/lib/vn/outfits'
@@ -247,6 +252,10 @@ export function CharacterEditor({
   const [showGenerate, setShowGenerate] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [saving, setSaving] = useState(false)
+  // P1-1 成长回写：开关默认关（导出保持干净的标准卡），打开后才取数并显示规模。
+  const [withGrowthExport, setWithGrowthExport] = useState(false)
+  const [growthBusy, setGrowthBusy] = useState(false)
+  const [growthSnap, setGrowthSnap] = useState<GrowthSnapshot | undefined>(undefined)
   const worlds = useApiQuery('worlds', () => worldsApi.list(), []) ?? []
   const editingWorld = worlds.find((w) => w.id === worldId)
   const customInstructTemplates = useApiQuery('instruct-templates', () => instructTemplatesApi.list(), []) ?? []
@@ -659,6 +668,60 @@ export function CharacterEditor({
     }
   }
 
+  // P1-1 成长回写：开关打开时取一次数（最近一段聊天的 track + 活跃事实），
+  // 让按钮旁的规模预览和导出用的是同一份快照，避免两次数出不一致。
+  // 依赖用 id 而非 character 对象 —— 父级重渲染换对象身份时不该重复取数。
+  const growthCharacterId = character?.id
+  useEffect(() => {
+    if (!withGrowthExport || !growthCharacterId) {
+      setGrowthSnap(undefined)
+      return
+    }
+    let cancelled = false
+    setGrowthBusy(true)
+    loadGrowthSnapshot(growthCharacterId)
+      .then(({ snap }) => {
+        if (!cancelled) setGrowthSnap(snap)
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setGrowthSnap(undefined)
+          toastError(errorMessage(e))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setGrowthBusy(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [withGrowthExport, growthCharacterId])
+
+  const growthLine = withGrowthExport && growthSnap ? describeGrowthSnapshot(growthSnap) : ''
+
+  const handleExportWithGrowth = async (kind: 'json' | 'png') => {
+    if (!character) return
+    let snap = growthSnap
+    if (!snap) {
+      setGrowthBusy(true)
+      try {
+        snap = (await loadGrowthSnapshot(character.id)).snap
+        setGrowthSnap(snap)
+      } catch (e) {
+        toastError(errorMessage(e))
+        return
+      } finally {
+        setGrowthBusy(false)
+      }
+    }
+    try {
+      if (kind === 'json') downloadJsonWithGrowth(form, snap)
+      else await downloadPngWithGrowth(form, snap, avatarDataUrl)
+    } catch (e) {
+      toastError(errorMessage(e))
+    }
+  }
+
   const handleImportPackFile = async (file: File) => {
     try {
       const pack = await parseCharacterPackFile(file)
@@ -758,12 +821,51 @@ export function CharacterEditor({
                 <Button variant="ghost" onClick={() => downloadPng(form, avatarDataUrl)}>
                   Export PNG
                 </Button>
+                {withGrowthExport && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleExportWithGrowth('json')}
+                      disabled={growthBusy}
+                      title={
+                        growthLine
+                          ? `Export JSON with the built-up growth baked in — ${growthLine}`
+                          : 'Export JSON with the built-up growth baked in'
+                      }
+                    >
+                      {growthBusy ? 'Baking…' : t('Export JSON + growth')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleExportWithGrowth('png')}
+                      disabled={growthBusy}
+                      title={growthLine ? `Export PNG with the built-up growth baked in — ${growthLine}` : undefined}
+                    >
+                      {growthBusy ? 'Baking…' : t('Export PNG + growth')}
+                    </Button>
+                  </>
+                )}
                 <Button variant="ghost" onClick={exportPack} title="Bundle the card, sprites, gallery, gift preferences, and bound world into one file">
                   Export pack
                 </Button>
               </>
             )}
           </div>
+
+          {character && (
+            <div className="rounded-lg border border-border/60 bg-bg-sunken/40 px-3 py-1">
+              <Toggle
+                checked={withGrowthExport}
+                onChange={setWithGrowthExport}
+                label={t('Include growth when exporting')}
+                description={
+                  growthLine
+                    ? `Bakes this character's rings, relationship, promises and memories into the card — ${growthLine}`
+                    : "Bakes this character's rings, relationship, promises and memories into the card so another app can continue the story"
+                }
+              />
+            </div>
+          )}
 
           <div className="flex items-start gap-4">
             <div className="relative shrink-0">
