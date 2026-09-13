@@ -95,7 +95,7 @@
 |---|---|---|
 | P5-1 | Electron 打包（桌面版） | 依赖 PWA 已就绪 |
 | P5-2 | Android APK（Capacitor） | 手机目前靠 PWA |
-| P5-3 | VPS 部署脚本（一键） | 现为手动 + docker-compose |
+| P5-3 ✅(2026-09-13) | VPS 部署脚本（一键） | 新增 `deploy/vps-deploy.sh`：幂等（预检 docker+compose → 首次生成 `.env` 与随机口令，权限 600，**从不覆盖已有 .env** → `compose up -d --build`，改配置走 `--recreate`）→ **验收两件事**：`/login.html` 返回 200，且口令闸门必须"错=401 / 对=200"，任一不满足即 `exit 1` 拒绝宣告成功。`docker-compose.yml` 把 `RP_ALLOWED_ORIGINS`/`RP_AUTH_PASSCODE`/`LLM_BASE_URL`/`LLM_API_KEY` 以 `${VAR:-}` 贯通（**变量名取自 `server/llmProxy.ts` 实读，非臆造**）；`DOCKER.md` 增「One command on a VPS」+ 环境变量表补齐 4 项 + 纠正"API 无鉴权"的旧表述 + `docker restart` 不重读 env 的提醒 | **实跑验证**（桩 docker + 本机已上线实例）：`.env` 生成正确（口令随机、权限 600、origin 由 `--domain` 推出为 `https://rp.example.com`）、UI 200 判定通过、**口令与在线实例不匹配时脚本 exit 1 拒绝报成功**（证明闸门检查真的会咬人）；`bash -n` 通过、`--help` 正常、非法参数退出码 2 | 已交付 |
 | P5-4 | 角色卡导入向导 | `importCharacterFile` 已在，缺"兼容性 + 成长数据预览报告" |
 | P5-5 | 多模态图像理解 | 让角色"看见"用户发的图（旧版 Phase 3.3，仍有效） |
 | P5-6 | 角色性格演变系统 | 性格随长期互动流变（FP `ABSORPTION-PLAN` §五 未吸收项） |
