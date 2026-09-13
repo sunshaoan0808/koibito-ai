@@ -2,6 +2,7 @@ import {
   BookOpen,
   CircleUserRound,
   GalleryHorizontalEnd,
+  GitBranch,
   Globe,
   MessageCircle,
   PanelLeftClose,
@@ -15,10 +16,11 @@ import {
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { t } from '@/lib/i18n'
 
-export type ViewId = 'chat' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings'
+export type ViewId = 'chat' | 'branches' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings'
 
 export const NAV: { id: ViewId; label: string; icon: LucideIcon }[] = [
   { id: 'chat', label: t('Chat'), icon: MessageCircle },
+  { id: 'branches', label: t('Branch tree'), icon: GitBranch },
   { id: 'assistant', label: t('Assistant'), icon: Sparkles },
   { id: 'characters', label: t('Characters'), icon: Users },
   { id: 'worlds', label: t('Worlds'), icon: Globe },

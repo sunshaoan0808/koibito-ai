@@ -12,6 +12,7 @@ import { WorldsView } from '@/components/worlds/WorldsView'
 import { PersonasView } from '@/components/personas/PersonasView'
 import { WorldInfoView } from '@/components/worldinfo/WorldInfoView'
 import { GalleryView } from '@/components/gallery/GalleryView'
+import { BranchTreeView } from '@/components/chat/BranchTreeView'
 import { SettingsView } from '@/components/settings/SettingsView'
 import { ToastViewport } from '@/components/ui/ToastViewport'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -146,6 +147,15 @@ export default function App() {
         {view === 'personas' && <PersonasView />}
         {view === 'worldinfo' && <WorldInfoView />}
         {view === 'gallery' && <GalleryView />}
+        {view === 'branches' && (
+          <BranchTreeView
+            activeChatId={activeChatId}
+            onOpenChat={(id) => {
+              setActiveChatId(id)
+              setView('chat')
+            }}
+          />
+        )}
         {view === 'settings' && <SettingsView />}
       </div>
       {/* App-level so a world's music keeps playing across view switches. Mounted in every view:
