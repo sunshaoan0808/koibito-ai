@@ -21,7 +21,7 @@
 ## 二、已完成改造（相对上游）
 
 1. **鉴权**（`server/llmProxy.ts`）：口令登录 + 会话 cookie，保护 `/api` 与 `/avatars`；`/login.html` 登录页；客户端 401 自动跳登录。注意：会话为**确定性 HMAC cookie**（passcode 派生，**重启不掉登录**，改口令即全体失效）。
-   ⚠️ `llmProxy.ts:1–20` 文件头注释仍写旧行为（会话存内存），待同步（`DEVELOPMENT_PLAN.md` P0-2）。
+   ✅ 头注释已与实现对齐（`11a4269`，关闭 `DEVELOPMENT_PLAN.md` P0-2）。
 2. **LLM 代理**：`/api/llm/*` → 网关，key 只存服务端；SSE 流式透传；**必须挂在 express.json 之前**（否则 POST body 被消费，代理永久挂起——已修，勿动挂载顺序）。
 3. **PWA**：`vite-plugin-pwa` + 中文 manifest + 图标（`public/icons/`）；`/api` 不缓存。
 4. **局域网**：服务端绑 `0.0.0.0`，vite `--host`，内网 Origin 放行（`server/index.ts` 里默认 `RP_ALLOWED_ORIGINS=*`）。
@@ -59,10 +59,10 @@
 2. ~~浏览器缓存旧 404~~ **已修复**：llmProxy 转发响应已加 `Cache-Control: no-store`。
 3. ~~会话重启丢失~~ **已修复**：改为确定性 HMAC cookie（passcode 派生），重启不掉登录；改口令即全体失效。
 4. llmProxy 请求日志已增强（含 model/stream/body 大小）。BODY tee 排查日志已移除。
-5. **中文文案混入英文残渣 3 处**（`src/lib/realism/engine.ts`）：`:321`（`accidentally`）、`:323`（`minimum 奖`）、`:524`（`soft 一瞬`）。**会被注入提示词**，待修（`DEVELOPMENT_PLAN.md` P0-1）。
+5. **中文文案混入英文残渣 3 处**（`src/lib/realism/engine.ts`）：`:321`（`accidentally`）、`:323`（`minimum 奖`）、`:524`（`soft 一瞬`）。**会被注入提示词**，已修（`11a4269`，关闭 `DEVELOPMENT_PLAN.md` P0-1）。
    验收：`grep -n "accidentally\|minimum 奖\|soft 一瞬" src/lib/realism/engine.ts` 无命中；`npm test` 全绿。
 6. **`FIXES_TODO.md` 悬空引用**：`src/lib/types.ts` 等 6 处注释引用该文件，但仓库内**不存在**（上游未随包分发）。
-7. **源码注释 GBK/UTF-8 误码（乱码）**：英文注释里的破折号 `—` 变成 `鈥?`，**30 行 / 2 文件**（`MessageBubble.tsx` 17 行、`ChatsPanel.tsx` 13 行）。扫描器：`tools/audit/scan_cjk_pollution.py`（MOJIBAKE 分类）。待修（`DEVELOPMENT_PLAN.md` P0-4）。
+7. **源码注释 GBK/UTF-8 误码（乱码）**：英文注释里的破折号 `—` 变成 `鈥?`，**30 行 / 2 文件**（`MessageBubble.tsx` 17 行、`ChatsPanel.tsx` 13 行）。扫描器：`tools/audit/scan_cjk_pollution.py`（MOJIBAKE 分类）。已修（`11a4269`，关闭 `DEVELOPMENT_PLAN.md` P0-4，扫描 0 命中）。
 8. **文档失真已修正（2026-09-13 全量对账）**：本文件原写 Chaos「24 个」**实为 70 条**；旧 `PROJECT_SUMMARY.md` / `DEVELOPMENT_PLAN.md` 引用了 5 个**不存在**的文件路径，两份文档已按真实代码刷新。
 
 ## 五、第三期吸收审计（2026-09-13，FP 用户手册/发布日志/剩余源码深挖）
