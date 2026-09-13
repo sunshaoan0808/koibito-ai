@@ -4,6 +4,7 @@ import {
   applyRepair,
   armRepairIfNeeded,
   bondDrift,
+  CHAOS_EVENTS,
   chaosRoll,
   decayNeeds,
   mergeRings,
@@ -135,6 +136,19 @@ describe('chaos mode', () => {
     const never = () => 1
     for (let i = 0; i < 30; i++) state = { ...(state ?? {}), chaosPressure: chaosRoll(state, i + 1, never).pressure }
     expect(state!.chaosPressure).toBe(100)
+  })
+
+  it('keeps the pool at the P1-3 quota, with no duplicate text', () => {
+    const flavors = ['fortune', 'misfortune', 'chaos', 'wild', 'slapstick'] as const
+    expect(CHAOS_EVENTS.length).toBeGreaterThanOrEqual(150)
+    for (const flavor of flavors) {
+      expect(CHAOS_EVENTS.filter((e) => e.flavor === flavor).length).toBeGreaterThanOrEqual(24)
+    }
+    expect(CHAOS_EVENTS.filter((e) => e.spicy).length).toBeGreaterThanOrEqual(30)
+    // Every spicy entry must be flagged, or the toggle leaks it into the default pool.
+    const texts = CHAOS_EVENTS.map((e) => e.text)
+    expect(new Set(texts).size).toBe(texts.length)
+    for (const e of CHAOS_EVENTS) expect(flavors).toContain(e.flavor)
   })
 
   it('returns an event when the roll fires', () => {
