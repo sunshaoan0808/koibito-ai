@@ -1,0 +1,16 @@
+koibito-ai — 版权与来源说明
+==============================
+
+本仓库基于上游项目 RP Suite 二次开发：
+  上游仓库：https://github.com/pnotisdev/rp
+  上游版权：Copyright (c) 2026 pnotisdev
+  上游许可：MIT License（原文见 LICENSE，未作修改）
+
+本仓库（koibito-ai）的改造部分：
+  修改版权：Copyright (c) 2026 sunshaoan0808
+  改造内容：中文本地化（i18n）、口令鉴权 + 服务端 LLM 代理、PWA、
+            真实感关系引擎（realism）等，详见 docs/ABSORPTION-PLAN.md
+
+许可：上游源码与本仓库修改部分均以 MIT License 发布。
+      依 MIT 条款，使用/复制/修改/再发布时须保留上述版权声明与许可声明。
+      本仓库未经上游作者 pnotisdev 背书，属独立二次开发。
