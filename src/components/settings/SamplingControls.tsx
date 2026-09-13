@@ -57,6 +57,8 @@ export function SamplingControls() {
   const contextLengthAuto = useSettingsStore((s) => s.contextLengthAuto)
   const setContextLengthAuto = useSettingsStore((s) => s.setContextLengthAuto)
   const autoSummarize = useSettingsStore((s) => s.autoSummarize)
+  const parrotEchoThreshold = useSettingsStore((s) => s.parrotEchoThreshold)
+  const setParrotEchoThreshold = useSettingsStore((s) => s.setParrotEchoThreshold)
   const setAutoSummarize = useSettingsStore((s) => s.setAutoSummarize)
   const keepRecentMessages = useSettingsStore((s) => s.keepRecentMessages)
   const setKeepRecentMessages = useSettingsStore((s) => s.setKeepRecentMessages)
@@ -214,6 +216,16 @@ export function SamplingControls() {
           onChange={setKeepRecentMessages}
           formatValue={(v) => `${v} messages`}
           description="Recent messages kept word-for-word; anything older gets summarized"
+        />
+        <Slider
+          label={t("Echo threshold")}
+          min={0.5}
+          max={1}
+          step={0.01}
+          value={parrotEchoThreshold}
+          onChange={setParrotEchoThreshold}
+          formatValue={(v) => v.toFixed(2)}
+          description="How close a reply has to be to an earlier turn before it counts as a repeat: 1.00 catches only near-verbatim echoes, lower values also catch looser paraphrases"
         />
         <div className="pt-3">
           <div className="mb-1.5 text-sm text-text">Summary detail</div>

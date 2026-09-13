@@ -1,5 +1,7 @@
 import { extractCardAssets, normalizeCardJson, wrapCardV2, type CharacterCardData } from './cardSpec'
 import { withGrowth, type GrowthSnapshot } from './exportWithGrowth'
+import { byafFlatCard, imageMimeFromPath, isByafFlatCard, isZipArchive, parseByafArchive } from './byaf'
+import { uint8ArrayToBase64 } from '@/lib/api/binaryUtils'
 import type { CustomExpression } from '@/lib/vn/expressions'
 import { readCharacterFromPng, writeCharacterToPng } from './png'
 
@@ -21,7 +23,13 @@ export interface ImportResult {
   customExpressions?: CustomExpression[]
 }
 
-/** Imports a SillyTavern / Character-Card-V3 card from a .png (embedded metadata) or .json file. */
+/**
+ * Imports a card from a .png (embedded metadata), .json, or Backyard AI (BYAF) file.
+ *
+ * The BYAF branches come before the plain JSON one and are keyed off the file's own content, not
+ * its extension: a zip is a BYAF archive, and a flat JSON is BYAF only when it carries BYAF-only
+ * field names (see `isByafFlatCard`) — so the existing V1/V2/V3 paths keep their old behavior.
+ */
 export async function importCharacterFile(file: File): Promise<ImportResult> {
   if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
     const raw = await readCharacterFromPng(file)
@@ -31,8 +39,22 @@ export async function importCharacterFile(file: File): Promise<ImportResult> {
     const avatarDataUrl = await fileToDataUrl(file)
     return { card, avatarDataUrl, sprites: assets.sprites, customExpressions: assets.customExpressions }
   }
+  // BYAF archives are zips; sniff the local-header signature rather than trusting the name, since
+  // the same card also travels as `.zip` / `.byaf` / a bare `.dat`.
+  const signature = new Uint8Array(await file.slice(0, 4).arrayBuffer())
+  if (isZipArchive(signature)) {
+    const archive = await parseByafArchive(new Uint8Array(await file.arrayBuffer()))
+    const portrait = archive.images[0]
+    return {
+      card: archive.card,
+      avatarDataUrl: portrait
+        ? `data:${imageMimeFromPath(portrait.path)};base64,${uint8ArrayToBase64(portrait.bytes)}`
+        : undefined,
+    }
+  }
   const text = await file.text()
   const raw = JSON.parse(text)
+  if (isByafFlatCard(raw)) return { card: byafFlatCard(raw as Record<string, unknown>) }
   const card = normalizeCardJson(raw)
   const assets = extractCardAssets(raw)
   return {

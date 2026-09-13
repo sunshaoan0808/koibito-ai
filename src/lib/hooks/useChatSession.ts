@@ -83,6 +83,8 @@ import {
   PHASES,
   spendEnergy,
   } from '@/lib/world/calendar'
+import { clockBoundaryNote, workScheduleGuidance } from '@/lib/world/workSchedule'
+import { CAST_SCAN_TURNS, castPromptLine, detectCastCandidates } from '@/lib/cast/detector'
 import { dateEventCardForActivity, type DayPlannerActivity } from '@/lib/world/dayPlanner'
 import {
   applyPromiseOps,
@@ -189,6 +191,7 @@ import {
   endsCleanly,
   EXPLICIT_ANTI_PATTERN_ENTRIES,
   isDuplicateOfRecentText,
+  isEchoOfHistory,
   isVerbatimEcho,
   SLOP_SCAN_TURNS,
   trimToLastSentence,
@@ -244,7 +247,7 @@ import {
 } from '@/lib/vn/sceneVision'
 import { assessRapport } from '@/lib/dating/rapport'
 import { bookAppliesToChat } from '@/lib/worldinfo/scope'
-import { buildFactsLorebook } from '@/lib/worldinfo/facts'
+import { buildFactsLorebook, dedupeFacts } from '@/lib/worldinfo/facts'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { errorMessage, toastError, toastInfo, toastSuccess } from '@/lib/store/useToastStore'
 import { playSendBlip } from '@/lib/audio/sfx'
@@ -432,6 +435,8 @@ export function useChatSession(chatId: string | null) {
   const chatCompletionSampler = useSettingsStore((s) => s.chatCompletionSampler)
   const instructTemplateId = useSettingsStore((s) => s.instructTemplateId)
   const autoSummarize = useSettingsStore((s) => s.autoSummarize)
+  const parrotEchoThreshold = useSettingsStore((s) => s.parrotEchoThreshold)
+  const dynamicCastNpc = useSettingsStore((s) => s.dynamicCastNpc)
   const keepRecentMessages = useSettingsStore((s) => s.keepRecentMessages)
   const summaryDetail = useSettingsStore((s) => s.summaryDetail)
   const autoDetectTasks = useSettingsStore((s) => s.autoDetectTasks)
@@ -623,7 +628,9 @@ export function useChatSession(chatId: string | null) {
         )
         .map((b) => ({ ...b.book, sourceKey: `book:${b.id}` }))
       const worldLorebook = world?.lorebook ? [{ ...world.lorebook, sourceKey: `world:${world.id}` }] : []
-      const factsLorebook = buildFactsLorebook(activeFacts).map((b) => ({ ...b, sourceKey: 'facts' }))
+      // P2-7: near-identical facts collapse before the token budget is spent, so a restatement does
+      // not buy two slots. A fact that adds detail survives — the bands live in `worldinfo/dedupe.ts`.
+      const factsLorebook = buildFactsLorebook(dedupeFacts(activeFacts)).map((b) => ({ ...b, sourceKey: 'facts' }))
       const affection = freshChat.affection ?? 0
       // One read of the char-reply count for the whole build — every turn-scoped window check below keys off it.
       const charReplyCount = countCharReplies(messages)
@@ -688,7 +695,31 @@ export function useChatSession(chatId: string | null) {
       // A genuine schedule conflict (busy/sleeping/traveling) reads as a noticed cost. Suppressed during a live event, which already carries its own cost.
       const scheduleConflictLine =
         !freshChat.activeEvent && speakerPresence ? scheduleConflictGuidance(speaker.card.name, speakerPresence) : ''
+      // P2-1 Clock In: today's derived shifts (consecutive busy slots merged into one run), plus a
+      // real consequence line when the scene has them away from a shift that is already running.
+      // `presentAt` is the scene location — the scheduled location would always read as on time.
+      const workScheduleLine = world
+        ? workScheduleGuidance(
+            speaker.card.name,
+            speaker.schedule,
+            world.currentDay ?? 0,
+            promptPhaseIndex,
+            freshChat.scene?.location ?? undefined,
+          )
+        : ''
       // Don't tell the model to "drift toward" a place the scene is already set — offer other backgrounds instead.
+      // P2-6 guests: name the people who walked into the scene so the model keeps calling them the
+      // same thing instead of inventing a second name for them. Capped by `CAST_PROMPT_LIMIT`, and
+      // the setting being off means nothing is scanned at all.
+      const castLine =
+        dynamicCastNpc === 'suggest'
+          ? castPromptLine(
+              detectCastCandidates({
+                texts: messages.slice(-CAST_SCAN_TURNS).map((m) => ({ id: m.id, text: m.text ?? '' })),
+                knownNames: [speaker.card.name, ...roster.map((c) => c.card.name)],
+              }),
+            )
+          : ''
       const sceneLocationNow = freshChat.scene?.location?.trim().toLowerCase() ?? ''
       const scheduleLocationNorm = scheduleLocation?.trim().toLowerCase() ?? ''
       const sceneAlreadyAtScheduleSpot =
@@ -1092,6 +1123,10 @@ export function useChatSession(chatId: string | null) {
             ...guidance(intimacyConsentTensionLine, true),
             ...guidance(sceneNudge, true),
             ...guidance(scheduleConflictLine, true),
+            // P2-1 Clock In: today's shift list + a lateness consequence line when it applies.
+            ...guidance(workScheduleLine, true),
+            // P2-6 guests: the newcomers already walking through this scene.
+            ...guidance(castLine, true),
             ...guidance(triggerStyleLine, true),
             ...guidance(ambientLine, true),
             ...guidance(participantGuidance ?? '', true),
@@ -2702,6 +2737,7 @@ export function useChatSession(chatId: string | null) {
           const isUsableReply =
             combined.trim().length > 0 &&
             !isVerbatimEcho(combined, historyForPrompt[historyForPrompt.length - 1]?.text) &&
+            !isEchoOfHistory(combined, historyForPrompt.map((m) => m.text), { threshold: parrotEchoThreshold }) &&
             !isDuplicateOfRecentText(combined, [...recentTextsForDuplicateCheck, relationshipDescriptionLeakText])
 
           if (continuing) {
@@ -3261,6 +3297,14 @@ export function useChatSession(chatId: string | null) {
             if (advanced.day !== fromDay || advanced.phaseIndex !== fromPhase) {
               await worldsApi.update(world.id, { currentDay: advanced.day, currentPhaseIndex: advanced.phaseIndex })
               toastInfo(`Time passes — ${advanced.note}`)
+              // P2-1 Clock In: this crossing may have clocked the character in or out of a shift.
+              const boundary = clockBoundaryNote(
+                character?.schedule,
+                { day: fromDay, phaseIndex: fromPhase },
+                { day: advanced.day, phaseIndex: advanced.phaseIndex },
+                character?.card?.name ?? 'They',
+              )
+              if (boundary) toastInfo(boundary)
             }
           }
         }

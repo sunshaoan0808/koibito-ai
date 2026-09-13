@@ -2,7 +2,9 @@
  * A deterministic, shared "living world" clock. Everything here is a pure function of an absolute
  * day number (plus a seed id for weather/mood) — only `WorldCard.currentDay`/`currentPhaseIndex`
  * are actually stored; season, weekday, holiday, weather, and mood-of-day are all recomputed on
- * demand and always reproducible for the same inputs.
+ * demand and always reproducible for the same inputs. Weather goes one level deeper than the date:
+ * each phase of a day drifts from that day's own pick (`getPhaseWeather`), and tomorrow's outlook is
+ * derived from the target day itself (`getTomorrowForecast`) — never from a clock read or an RNG.
  */
 
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const
@@ -64,8 +66,12 @@ export function daysUntilAnnualDate(day: number, targetDayOfYear: number): numbe
 export const WEATHER_KINDS = ['clear', 'rain', 'storm', 'overcast', 'snow', 'wind', 'fog'] as const
 export type WeatherKind = (typeof WEATHER_KINDS)[number]
 
-/** Repeating an entry biases the pick toward it — a cheap weighting without a separate weight table. */
-const WEATHER_BY_SEASON: Record<Season, WeatherKind[]> = {
+/**
+ * A season's ordered weather cycle. Repeating an entry biases the pick toward it — a cheap weighting
+ * without a separate weight table — and the *order* is what the phase walk below steps along, so the
+ * only kinds a day can drift between are cycle neighbours (see `getPhaseWeather`).
+ */
+export const SEASON_WEATHER_CYCLE: Record<Season, readonly WeatherKind[]> = {
   spring: ['clear', 'rain', 'rain', 'overcast', 'wind'],
   summer: ['clear', 'clear', 'clear', 'storm', 'overcast'],
   autumn: ['clear', 'wind', 'rain', 'fog', 'overcast'],
@@ -102,10 +108,114 @@ export function pickFrom<T>(options: T[], seed: string): T {
   return options[idx]
 }
 
-/** Deterministic per-world-per-day weather — same day always reads the same, browsable ahead of time. */
+/** Index into a bounded weather cycle for a seed — the same primitive `pickFrom` uses, split out so
+ *  the phase walk can start from the day's own pick rather than re-rolling it. */
+function cycleIndex(cycle: readonly WeatherKind[], seed: string): number {
+  return Math.min(cycle.length - 1, Math.floor(seededFraction(seed) * cycle.length))
+}
+
+/** Deterministic per-world-per-day weather — same day always reads the same, browsable ahead of time.
+ *  This is the day's *anchor* kind: its morning phase reads exactly this, and the rest of the day
+ *  drifts from here (see `getPhaseWeather`). */
 export function getWeather(worldId: string, day: number): WeatherKind {
   const info = getCalendarInfo(day)
-  return pickFrom(WEATHER_BY_SEASON[info.season], `weather:${worldId}:${info.day}`)
+  const cycle = SEASON_WEATHER_CYCLE[info.season]
+  return cycle[cycleIndex(cycle, `weather:${worldId}:${info.day}`)]
+}
+
+/** How likely a phase is to simply hold the previous phase's weather. Well above half on purpose:
+ *  a day should read as weather *changing* once or twice, not as four independent rolls that happen
+ *  to be adjacent — that keeps the phase-to-phase walk legible in the prompt. */
+const PHASE_HOLD_CHANCE = 0.55
+
+/**
+ * Hour-scale (phase-scale) weather: the morning phase is exactly the day's own `getWeather`, and each
+ * later phase either holds or drifts one rung along the season's cycle. Deterministic on
+ * `(worldId, day, phaseIndex)` alone — no clock reads, no RNG — so the same moment always reads the
+ * same, and consecutive phases are never more than one cycle step apart.
+ */
+export function getPhaseWeather(worldId: string, day: number, phaseIndex: number): WeatherKind {
+  const info = getCalendarInfo(day)
+  const cycle = SEASON_WEATHER_CYCLE[info.season]
+  let idx = cycleIndex(cycle, `weather:${worldId}:${info.day}`)
+  // NaN (an unset phase index) fails the comparison below and falls back to the morning anchor.
+  const lastStep = clampPhaseIndex(phaseIndex)
+  for (let step = 1; step <= lastStep; step++) {
+    if (seededFraction(`weather-hold:${worldId}:${info.day}:${step}`) < PHASE_HOLD_CHANCE) continue
+    // Direction is its own seeded coin, and the ends of the cycle bounce inward rather than wrapping —
+    // winter never drifts from snow straight into a wind-free heatwave.
+    const dir = seededFraction(`weather-drift:${worldId}:${info.day}:${step}`) < 0.5 ? -1 : 1
+    idx = Math.max(0, Math.min(cycle.length - 1, idx + dir))
+  }
+  return cycle[idx]
+}
+
+export interface PhaseWeatherSlice {
+  phase: DayPhase
+  phaseIndex: number
+  kind: WeatherKind
+  /** The English, model-facing description (`describeWeather`) — what a UI or prompt shows. */
+  description: string
+}
+
+/** The whole day at phase granularity, morning first — the strip the world clock renders and what
+ *  the continuity tests walk. */
+export function getDayPhaseWeather(worldId: string, day: number): PhaseWeatherSlice[] {
+  return PHASES.map((phase, phaseIndex) => {
+    const kind = getPhaseWeather(worldId, day, phaseIndex)
+    return { phase, phaseIndex, kind, description: describeWeather(kind) }
+  })
+}
+
+/** Whether two kinds sit on the same or a neighbouring rung of a season's cycle — the only change
+ *  `getPhaseWeather` is allowed to make between consecutive phases. A repeated entry in the cycle
+ *  counts at every index it occupies. */
+export function isWeatherDrift(season: Season, from: WeatherKind, to: WeatherKind): boolean {
+  const cycle = SEASON_WEATHER_CYCLE[season]
+  const fromIdx = cycle.flatMap((kind, i) => (kind === from ? [i] : []))
+  const toIdx = cycle.flatMap((kind, i) => (kind === to ? [i] : []))
+  return fromIdx.some((a) => toIdx.some((b) => Math.abs(a - b) <= 1))
+}
+
+/** How often a next-day forecast should actually match the day it named. High enough to be worth
+ *  acting on, below 1 so an occasional forecast is honestly wrong — a foresight that is never wrong
+ *  is not a forecast, it is a spoiler. */
+const FORECAST_HIT_CHANCE = 0.8
+
+export interface WeatherForecast {
+  /** The day being forecast, already wrapped into the year — so `day + 1` past the year's end reads
+   *  as day 0, exactly as the clock's own rollover will. */
+  day: number
+  kind: WeatherKind
+  description: string
+  /** 0-1, deterministic per world/day — a display hint for how much to trust this call, not a live
+   *  measurement. */
+  confidence: number
+}
+
+/**
+ * Tomorrow's outlook, asked for from `day`. Deterministic on `(worldId, day)` and mostly right by
+ * construction: usually the kind the day will actually read as in the morning, otherwise a single
+ * cycle step off — the classic "close, but the weather turned". Callers asking from the same day
+ * always get the same forecast; the same *target* day forecast from two different todays may
+ * legitimately differ, which is what makes it a forecast rather than a lookup.
+ */
+export function getTomorrowForecast(worldId: string, day: number): WeatherForecast {
+  const target = getCalendarInfo(day + 1)
+  const cycle = SEASON_WEATHER_CYCLE[target.season]
+  const actualIdx = cycleIndex(cycle, `weather:${worldId}:${target.day}`)
+  const confident = seededFraction(`forecast:${worldId}:${getCalendarInfo(day).day}:${target.day}`) < FORECAST_HIT_CHANCE
+  let idx = actualIdx
+  if (!confident) {
+    const dir = seededFraction(`forecast-drift:${worldId}:${target.day}`) < 0.5 ? -1 : 1
+    idx = Math.max(0, Math.min(cycle.length - 1, actualIdx + dir))
+  }
+  const kind = cycle[idx]
+  // A confident call still reads as confident weather, not as a promise: the band stays under 1.
+  const confidence = confident
+    ? 0.82 + seededFraction(`forecast-confidence:${worldId}:${target.day}`) * 0.13
+    : 0.55 + seededFraction(`forecast-confidence:${worldId}:${target.day}`) * 0.13
+  return { day: target.day, kind, description: describeWeather(kind), confidence }
 }
 
 const MOODS = [
@@ -179,7 +289,10 @@ export interface WeatherPreferences {
   hates?: WeatherKind[]
 }
 
-/** A short, deterministic, model-facing line describing "right now" in this world for this character. */
+/** A short, deterministic, model-facing line describing "right now" in this world for this character.
+ *  Weather is read at phase granularity (`getPhaseWeather`), so the line changes as the clock moves
+ *  inside a day rather than only when the date does, and it closes with tomorrow's outlook — the one
+ *  forward-looking weather fact a character could plausibly have heard on a forecast. */
 export function describeWorldMoment(opts: {
   worldId: string
   characterId: string
@@ -189,7 +302,7 @@ export function describeWorldMoment(opts: {
 }): string {
   const info = getCalendarInfo(opts.day)
   const phase = PHASES[Math.max(0, Math.min(PHASES.length - 1, opts.phaseIndex))]
-  const weather = getWeather(opts.worldId, opts.day)
+  const weather = getPhaseWeather(opts.worldId, opts.day, opts.phaseIndex)
   const mood = getMoodOfDay(opts.characterId, opts.day)
   const holidayNote = info.holiday ? ` — today is ${info.holiday}` : ''
   const weatherNote = opts.weatherPreferences?.loves?.includes(weather)
@@ -197,7 +310,8 @@ export function describeWorldMoment(opts: {
     : opts.weatherPreferences?.hates?.includes(weather)
       ? ' (a kind of weather {{char}} dislikes)'
       : ''
-  return `It's ${phase} on a ${info.season} ${info.weekday}${holidayNote}. The weather is ${describeWeather(weather)}${weatherNote}. {{char}} is feeling ${mood} today.`
+  const forecast = getTomorrowForecast(opts.worldId, opts.day)
+  return `It's ${phase} on a ${info.season} ${info.weekday}${holidayNote}. The weather is ${describeWeather(weather)}${weatherNote}. Tomorrow looks ${describeWeather(forecast.kind)}. {{char}} is feeling ${mood} today.`
 }
 
 export type PresenceStatus = 'available' | 'busy' | 'sleeping' | 'traveling'

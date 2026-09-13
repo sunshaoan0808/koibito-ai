@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildFactsLorebook, factContent, FACTS_TOKEN_BUDGET } from './facts'
+import { buildFactsLorebook, dedupeFacts, factContent, FACTS_TOKEN_BUDGET } from './facts'
+import { RECALL_DEDUPE_THRESHOLD } from './dedupe'
 import { activateWorldInfo } from './activation'
 import type { ChatFact } from '@/lib/types'
 
@@ -99,5 +100,73 @@ describe('buildFactsLorebook', () => {
     expect(result.droppedForBudget.map((e) => e.content)).toEqual(
       expect.arrayContaining([expect.stringContaining('oldest'), expect.stringContaining('middle')]),
     )
+  })
+})
+
+describe('dedupeFacts', () => {
+  const sameEventA = '*She keeps a photo of her grandmother in her wallet.*'
+  const sameEventB = 'she keeps a photo of her grandmother in her wallet'
+  const restated = 'He has a sister named Mira.'
+  const restatedLonger = 'He has a sister named Mira who lives in Osaka.'
+  const unrelated = 'She hates the smell of lavender candles.'
+  const longFact =
+    'She told him about the letter from her mother that arrived three days late, and about the ones that never came at all, and about what she did with them.'
+  const longFactRicher = `${longFact} She kept every one.`
+
+  it('drops a fact that restates an earlier one, keeping the richer entry', () => {
+    const older = fact({ text: longFact, createdAt: 1 })
+    const newer = fact({ text: longFactRicher, createdAt: 2 })
+    const deduped = dedupeFacts([older, newer])
+    expect(deduped.map((f) => f.id)).toEqual([newer.id])
+  })
+
+  it('collapses a duplicate that differs only in markup and casing', () => {
+    const first = fact({ text: sameEventA, createdAt: 1 })
+    const second = fact({ text: sameEventB, createdAt: 2 })
+    expect(dedupeFacts([first, second]).map((f) => f.id)).toEqual([first.id])
+  })
+
+  it('keeps a fact that adds detail to an earlier one, rather than over-pruning it', () => {
+    const plain = fact({ text: restated, createdAt: 1 })
+    const detailed = fact({ text: restatedLonger, createdAt: 2 })
+    const distinct = fact({ text: unrelated, createdAt: 3 })
+    expect(dedupeFacts([plain, detailed, distinct]).map((f) => f.id)).toEqual([plain.id, detailed.id, distinct.id])
+  })
+
+  it('defaults to RECALL_DEDUPE_THRESHOLD, and takes a caller-supplied one', () => {
+    const plain = fact({ text: restated, createdAt: 1 })
+    const detailed = fact({ text: restatedLonger, createdAt: 2 })
+    expect(dedupeFacts([plain, detailed])).toHaveLength(2)
+    expect(dedupeFacts([plain, detailed], { threshold: RECALL_DEDUPE_THRESHOLD })).toHaveLength(2)
+    expect(dedupeFacts([plain, detailed], { threshold: 0.5 })).toHaveLength(1)
+  })
+
+  it('returns an empty list unchanged, and does not mutate the input', () => {
+    expect(dedupeFacts([])).toEqual([])
+    const facts = [fact({ text: sameEventA, createdAt: 1 }), fact({ text: sameEventB, createdAt: 2 })]
+    dedupeFacts(facts)
+    expect(facts).toHaveLength(2)
+  })
+
+  it('end to end with buildFactsLorebook: the duplicate never reaches the prompt, the rest survives', () => {
+    const facts = [
+      fact({ text: sameEventA, createdAt: 1 }),
+      fact({ text: sameEventB, createdAt: 2 }),
+      fact({ text: restated, createdAt: 3 }),
+      fact({ text: restatedLonger, createdAt: 4 }),
+      fact({ text: unrelated, createdAt: 5 }),
+    ]
+    const [raw] = buildFactsLorebook(facts)
+    const [book] = buildFactsLorebook(dedupeFacts(facts))
+    expect(raw.entries).toHaveLength(5)
+    expect(book.entries).toHaveLength(4)
+    // The near-miss restatement and the unrelated fact are both still there.
+    expect(book.entries.map((e) => e.content)).toEqual(
+      expect.arrayContaining([sameEventA, restated, restatedLonger, unrelated]),
+    )
+
+    const result = activateWorldInfo([book], '')
+    expect(result.activated).toHaveLength(4)
+    expect(result.activated.map((e) => e.content)).not.toContain(sameEventB)
   })
 })

@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/Button'
 import { readAttachment, type PendingAttachment } from '@/lib/attachments'
 import { startDictation, sttSupported, type DictationHandle } from '@/lib/voice/dictation'
 import { t } from '@/lib/i18n'
+import { toastError, toastInfo } from '@/lib/store/useToastStore'
+import { SLASH_COMMANDS, isSlashInput, runSlashCommand, slashCommandDraft, type SlashOutcome } from '@/lib/chat/slashCommands'
 
 interface ComposerProps {
   value: string
@@ -70,11 +72,56 @@ export function Composer({
   const textRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const vn = variant === 'vn'
+  /** Hint chips show once the draft opens with "/" — the registry decides what's listed. */
+  const showSlashHints = isSlashInput(value) && !disabled
 
   const isEmpty = !value.trim() && attachments.length === 0
 
+  // Slash commands (P2-4): the parsing and the registry live in `lib/chat/slashCommands`, which
+  // hands back an outcome; this component only performs it with the plumbing it already has —
+  // toasts, the draft, or the ordinary send path. A line that isn't a registered command
+  // (`resolveSlashCommand` returns undefined) falls through to a normal send untouched.
+  const applySlashOutcome = (outcome: SlashOutcome) => {
+    switch (outcome.kind) {
+      case 'toast':
+        if (outcome.tone === 'error') toastError(outcome.message)
+        else toastInfo(outcome.message)
+        onChangeValue('')
+        break
+      case 'fill':
+        onChangeValue(outcome.text)
+        textRef.current?.focus()
+        break
+      case 'send':
+        onSend(outcome.text, [])
+        onChangeValue('')
+        setAttachments([])
+        break
+      case 'skip':
+        if (canContinue) onContinue()
+        else toastInfo('现在没有可以续写的回复。')
+        onChangeValue('')
+        break
+    }
+  }
+
+  /** Returns true when the draft was consumed as a slash command. */
+  const runSlashInput = (raw: string): boolean => {
+    const outcome = runSlashCommand(raw)
+    if (!outcome) return false
+    // Only an injected handler can be async (P2-5's image pipeline) — no handler is wired here.
+    if (outcome instanceof Promise) {
+      onChangeValue('')
+      outcome.then(applySlashOutcome, (e) => setComposerError(e instanceof Error ? e.message : String(e)))
+    } else {
+      applySlashOutcome(outcome)
+    }
+    return true
+  }
+
   const submit = () => {
     if (disabled) return
+    if (isSlashInput(value) && runSlashInput(value)) return
     if (isEmpty) {
       if (canContinue) onContinue()
       return
@@ -202,6 +249,30 @@ export function Composer({
                   <X size={12} strokeWidth={2.5} />
                 </button>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Slash-command hint chips (P2-4): shown while the draft opens with "/" so the commands
+            are discoverable instead of memorised. Clicking one drops its usage into the draft,
+            ready for arguments; the list and the wording both come from the pure registry. */}
+        {showSlashHints && (
+          <div className={`mb-2 flex flex-wrap items-center gap-1.5 border-b px-1.5 pb-2 ${vn ? 'border-white/10' : 'border-border/50'}`}>
+            {SLASH_COMMANDS.map((command) => (
+              <button
+                key={command.name}
+                type="button"
+                onClick={() => {
+                  onChangeValue(slashCommandDraft(command))
+                  textRef.current?.focus()
+                }}
+                title={`${command.usage} — ${command.summary}`}
+                className={`rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                  vn ? 'bg-white/10 text-white/70 hover:text-white' : 'bg-bg-elevated text-text-muted hover:text-text'
+                }`}
+              >
+                {`/${command.name}`}
+              </button>
             ))}
           </div>
         )}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Globe, ImagePlus, Moon, Music, Plus, Star, X } from 'lucide-react'
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
-import { worldsApi } from '@/lib/api/client'
+import { worldsApi, charactersApi } from '@/lib/api/client'
 import type { CustomSceneFlag, GiftItem, GiftRarity, ItemDef, ItemEffect, RelationshipDimension, WorldCard } from '@/lib/types'
 import { fileToDataUrl } from '@/lib/characters/importExport'
 import { DEFAULT_BACKGROUNDS, DEFAULT_BACKGROUND_IDS, slugifyBackgroundId, type CustomBackground } from '@/lib/vn/backgrounds'
@@ -10,7 +10,8 @@ import { combinedSceneFlags, COMMITMENT_ORDER, formatCommitmentStatus, formatRel
 import { intimacyArousalWeight, type IntimacyCategory, type IntimacyUnlockable } from '@/lib/dating/intimacyCatalog'
 import { BODY_REGIONS } from '@/lib/dating/arousal'
 import { BUILT_IN_KINKS } from '@/lib/dating/kinks'
-import { advancePhase, getCalendarInfo, getEnergyRemaining, getMaxEnergyForDay, getWeather, describeWeather, PHASES } from '@/lib/world/calendar'
+import { advancePhase, getCalendarInfo, getDayPhaseWeather, getEnergyRemaining, getMaxEnergyForDay, getTomorrowForecast, PHASES } from '@/lib/world/calendar'
+import { clockBoundaryNote } from '@/lib/world/workSchedule'
 import { WORLD_TEMPLATES, getWorldTemplate, hiddenWorldTabs, normalizeWorldTemplateId, type WorldTemplateId } from '@/lib/world/worldTemplates'
 import { newId } from '@/lib/id'
 import { NumberField, SelectField, TextAreaField, TextField } from '@/components/ui/Field'
@@ -24,7 +25,7 @@ import { EditorShell, type EditorTab } from '@/components/ui/EditorShell'
 import { ViewShell } from '@/components/ui/ViewShell'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ListEditor } from '@/components/ui/ListEditor'
-import { errorMessage, toastError, toastSuccess } from '@/lib/store/useToastStore'
+import { errorMessage, toastError, toastInfo, toastSuccess } from '@/lib/store/useToastStore'
 import { FileButton } from '@/components/ui/FileButton'
 import { confirmDialog } from '@/lib/store/useConfirmStore'
 import { LorebookEditor } from '@/components/worldinfo/LorebookEditor'
@@ -484,6 +485,29 @@ function WorldEditor({
     }
     setCurrentDay(next.day)
     setCurrentPhaseIndex(next.phaseIndex)
+    await announceClockBoundaries(
+      { day: currentDay, phaseIndex: currentPhaseIndex },
+      { day: next.day, phaseIndex: next.phaseIndex },
+    )
+  }
+
+  // P2-1 Clock In: the clock just crossed a phase, so anyone living in this world with a work slot
+  // at that boundary gets clocked in or out out loud. Best-effort — a failed lookup is a lost
+  // nicety, never a lost clock move, so it swallows its own errors.
+  const announceClockBoundaries = async (
+    from: { day: number; phaseIndex: number },
+    to: { day: number; phaseIndex: number },
+  ) => {
+    try {
+      const roster = await charactersApi.list()
+      const notes = roster
+        .filter((c) => c.worldId === world?.id && c.schedule?.length)
+        .map((c) => clockBoundaryNote(c.schedule, from, to, c.card.name))
+        .filter(Boolean)
+      if (notes.length > 0) toastInfo(notes.join(' '))
+    } catch {
+      // Nothing to do: the boundary note is decoration on top of a clock that already moved.
+    }
   }
 
   const remove = async () => {
@@ -1222,7 +1246,9 @@ function WorldEditor({
         >
           {(() => {
             const info = getCalendarInfo(currentDay)
-            const weather = getWeather(world.id, currentDay)
+            const phaseWeather = getDayPhaseWeather(world.id, currentDay)
+            const forecast = getTomorrowForecast(world.id, currentDay)
+            const nowIndex = Math.max(0, Math.min(phaseWeather.length - 1, currentPhaseIndex))
             return (
               <>
                 <div className="mb-1 text-sm text-text">
@@ -1230,8 +1256,33 @@ function WorldEditor({
                   {info.holiday ? <span className="text-romance"> · {info.holiday}</span> : null}
                 </div>
                 <div className="mb-4 text-xs text-text-muted">
-                  {PHASES[currentPhaseIndex]}, {describeWeather(weather)} ·{' '}
+                  {PHASES[nowIndex]}, {phaseWeather[nowIndex].description} ·{' '}
                   {getEnergyRemaining(currentDay, currentPhaseIndex)}/{getMaxEnergyForDay(currentDay)} actions left today
+                </div>
+                {/* Today at phase granularity — the same walk the prompt reads, so what is on screen and
+                    what the model is told can never disagree. */}
+                <div className="mb-2">
+                  <div className="mb-1 text-xs uppercase tracking-wide text-text-muted">Today, phase by phase</div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    {phaseWeather.map((slice) => (
+                      <span
+                        key={slice.phase}
+                        title={slice.description}
+                        className={`rounded-lg px-2 py-0.5 capitalize ${
+                          slice.phaseIndex === nowIndex
+                            ? 'bg-bg-sunken text-text ring-1 ring-accent/40'
+                            : 'text-text-muted'
+                        }`}
+                      >
+                        {slice.phase} · {slice.kind}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="mb-4 text-xs text-text-muted">
+                  {/* Fixed when the day is: the forecast is derived from the target day itself, so it
+                      holds wherever it is read from. */}
+                  Tomorrow looks {forecast.description} · {Math.round(forecast.confidence * 100)}% confident
                 </div>
                 <Button variant="secondary" onClick={advanceClock} disabled={advancing}>
                   {advancing

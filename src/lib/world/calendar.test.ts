@@ -13,17 +13,23 @@ import {
   describeWorldMoment,
   getCalendarInfo,
   getCurrentActivity,
+  getDayPhaseWeather,
   getEnergyRemaining,
   getMaxEnergyForDay,
   getMoodOfDay,
+  getPhaseWeather,
+  getTomorrowForecast,
   getWeather,
+  isWeatherDrift,
   detectNarratedPhase,
   isNightPhase,
   PHASES,
   reasonedAdvance,
   resolveScheduledPresence,
+  SEASON_WEATHER_CYCLE,
   spendEnergy,
   WEATHER_KINDS,
+  type WeatherKind,
   type ScheduleEntry,
 } from './calendar'
 
@@ -533,5 +539,211 @@ describe('reasonedAdvance', () => {
     // Spring's holiday sits on day-of-season 14, i.e. day 13.
     const advanced = reasonedAdvance(11, 0, { phases: 0, days: 2, reason: 'a few days later', landOnPhase: 'morning' })
     expect(getCalendarInfo(advanced.day).holiday).toBe('First Bloom')
+  })
+})
+
+describe('getPhaseWeather', () => {
+  const PHASE_INDEXES = PHASES.map((_, i) => i)
+
+  it('anchors the morning phase on the day-level getWeather, so day-granularity callers keep their reading', () => {
+    for (let day = 0; day < DAYS_PER_YEAR; day++) {
+      expect(getPhaseWeather('anchor-world', day, 0)).toBe(getWeather('anchor-world', day))
+    }
+  })
+
+  it('is deterministic — the same world, day and phase always read the same', () => {
+    expect(getPhaseWeather('w1', 40, 2)).toBe(getPhaseWeather('w1', 40, 2))
+    expect(getPhaseWeather('w1', 40, 2)).toBe(getPhaseWeather('w1', DAYS_PER_YEAR + 40, 2))
+  })
+
+  it('only ever picks a kind from the season it sits in — and never snow in summer', () => {
+    for (let day = 0; day < DAYS_PER_YEAR; day++) {
+      const { season } = getCalendarInfo(day)
+      for (const phaseIndex of PHASE_INDEXES) {
+        const kind = getPhaseWeather('w-season', day, phaseIndex)
+        expect(SEASON_WEATHER_CYCLE[season]).toContain(kind)
+        if (season === 'summer') expect(kind).not.toBe('snow')
+      }
+    }
+  })
+
+  it('actually changes inside a day, but only on some days — not still day-granularity weather', () => {
+    let changingDays = 0
+    let totalShifts = 0
+    for (let day = 0; day < DAYS_PER_YEAR; day++) {
+      const kinds = PHASE_INDEXES.map((i) => getPhaseWeather('w-drift', day, i))
+      const shifts = kinds.filter((kind, i) => i > 0 && kind !== kinds[i - 1]).length
+      if (shifts > 0) changingDays++
+      totalShifts += shifts
+    }
+    // Roughly a third to two thirds of days should shift at least once (PHASE_HOLD_CHANCE leaves the
+    // rest flat), and the mean number of shifts stays legible — a day is not four unrelated rolls.
+    expect(changingDays).toBeGreaterThan(DAYS_PER_YEAR * 0.25)
+    expect(changingDays).toBeLessThan(DAYS_PER_YEAR * 0.8)
+    const meanShifts = totalShifts / DAYS_PER_YEAR
+    expect(meanShifts).toBeGreaterThan(0.5)
+    expect(meanShifts).toBeLessThan(2.5)
+  })
+
+  it('never swings more than one rung of the season cycle between consecutive phases', () => {
+    for (let day = 0; day < DAYS_PER_YEAR; day++) {
+      const { season } = getCalendarInfo(day)
+      for (let phaseIndex = 1; phaseIndex < PHASES.length; phaseIndex++) {
+        const from = getPhaseWeather('w-continuity', day, phaseIndex - 1)
+        const to = getPhaseWeather('w-continuity', day, phaseIndex)
+        expect(isWeatherDrift(season, from, to)).toBe(true)
+      }
+    }
+  })
+
+  it('clamps an out-of-range or unset phase index instead of walking past night', () => {
+    expect(getPhaseWeather('w1', 40, 99)).toBe(getPhaseWeather('w1', 40, PHASES.length - 1))
+    expect(getPhaseWeather('w1', 40, -5)).toBe(getPhaseWeather('w1', 40, 0))
+    expect(getPhaseWeather('w1', 40, NaN)).toBe(getPhaseWeather('w1', 40, 0))
+  })
+
+  it('reads a coherent four-phase chain for a sample world and day', () => {
+    // Golden regression lock: the seeds are frozen, so this chain must not drift between runs.
+    expect(getDayPhaseWeather('chain-world', 5).map((s) => s.kind)).toEqual([
+      getPhaseWeather('chain-world', 5, 0),
+      getPhaseWeather('chain-world', 5, 1),
+      getPhaseWeather('chain-world', 5, 2),
+      getPhaseWeather('chain-world', 5, 3),
+    ])
+    const { season } = getCalendarInfo(5)
+    const chain = getDayPhaseWeather('chain-world', 5)
+    for (let i = 1; i < chain.length; i++) {
+      expect(isWeatherDrift(season, chain[i - 1].kind, chain[i].kind)).toBe(true)
+    }
+  })
+})
+
+describe('getDayPhaseWeather', () => {
+  it('returns one described slice per phase, in clock order', () => {
+    const slices = getDayPhaseWeather('w1', 12)
+    expect(slices.map((s) => s.phase)).toEqual([...PHASES])
+    expect(slices.map((s) => s.phaseIndex)).toEqual(PHASES.map((_, i) => i))
+    for (const slice of slices) {
+      expect(slice.kind).toBe(getPhaseWeather('w1', 12, slice.phaseIndex))
+      expect(slice.description).toBe(describeWeather(slice.kind))
+    }
+  })
+
+  it('starts the strip on the day-level weather', () => {
+    expect(getDayPhaseWeather('w1', 12)[0].kind).toBe(getWeather('w1', 12))
+  })
+})
+
+describe('isWeatherDrift', () => {
+  it('reads the same kind, and a single cycle step either way, as a drift', () => {
+    // Autumn's cycle is clear, wind, rain, fog, overcast.
+    expect(isWeatherDrift('autumn', 'clear', 'clear')).toBe(true)
+    expect(isWeatherDrift('autumn', 'clear', 'wind')).toBe(true)
+    expect(isWeatherDrift('autumn', 'rain', 'wind')).toBe(true)
+    expect(isWeatherDrift('autumn', 'rain', 'fog')).toBe(true)
+  })
+
+  it('reads two or more cycle steps as a swing, and a kind outside the season as impossible', () => {
+    expect(isWeatherDrift('autumn', 'clear', 'fog')).toBe(false)
+    expect(isWeatherDrift('winter', 'clear', 'storm')).toBe(false)
+    expect(isWeatherDrift('summer', 'snow', 'clear')).toBe(false)
+  })
+
+  it('counts a repeated cycle entry at every index it occupies', () => {
+    // Spring's cycle is clear, rain, rain, overcast, wind — the second rain still neighbours overcast.
+    expect(isWeatherDrift('spring', 'rain', 'overcast')).toBe(true)
+  })
+})
+
+describe('getTomorrowForecast', () => {
+  it('is deterministic for the same world and day, whoever asks', () => {
+    expect(getTomorrowForecast('w1', 40)).toEqual(getTomorrowForecast('w1', 40))
+    expect(getTomorrowForecast('w1', 40).kind).toBe(getTomorrowForecast('w1', DAYS_PER_YEAR + 40).kind)
+  })
+
+  it('names the day the clock actually rolls into, wrapping the year end back to spring day 0', () => {
+    expect(getTomorrowForecast('w1', 10).day).toBe(11)
+    const wrapped = getTomorrowForecast('w1', DAYS_PER_YEAR - 1)
+    expect(wrapped.day).toBe(0)
+    // Asked from the last day of the year or from the day before day 0, the outlook is the same call.
+    expect(wrapped).toEqual(getTomorrowForecast('w1', -1))
+    expect(isWeatherDrift('spring', getWeather('w1', 0), wrapped.kind)).toBe(true)
+  })
+
+  it('is mostly right — the hit rate over a year is credible, but never perfect', () => {
+    let hits = 0
+    let total = 0
+    for (const worldId of ['w-hit-a', 'w-hit-b', 'w-hit-c']) {
+      for (let day = 0; day < DAYS_PER_YEAR * 2; day++) {
+        total++
+        if (getTomorrowForecast(worldId, day).kind === getWeather(worldId, day + 1)) hits++
+      }
+    }
+    const hitRate = hits / total
+    expect(hitRate).toBeGreaterThan(0.6)
+    expect(hitRate).toBeLessThan(0.95)
+  })
+
+  it('keeps its misses close — an off forecast drifts one rung, never a wild swing', () => {
+    for (let day = 0; day < DAYS_PER_YEAR; day++) {
+      const forecast = getTomorrowForecast('w-miss', day)
+      const target = getCalendarInfo(day + 1)
+      expect(SEASON_WEATHER_CYCLE[target.season]).toContain(forecast.kind)
+      expect(isWeatherDrift(target.season, getWeather('w-miss', day + 1), forecast.kind)).toBe(true)
+      expect(forecast.description).toBe(describeWeather(forecast.kind))
+    }
+  })
+
+  it('is wrong often enough to be a forecast rather than a lookup', () => {
+    let misses = 0
+    for (let day = 0; day < DAYS_PER_YEAR * 2; day++) {
+      if (getTomorrowForecast('w-miss', day).kind !== getWeather('w-miss', day + 1)) misses++
+    }
+    expect(misses).toBeGreaterThan(0)
+  })
+
+  it('carries a confidence that is honest — above a coin flip, never a promise', () => {
+    for (let day = 0; day < DAYS_PER_YEAR; day++) {
+      const { confidence } = getTomorrowForecast('w1', day)
+      expect(confidence).toBeGreaterThan(0.5)
+      expect(confidence).toBeLessThan(0.95)
+    }
+  })
+})
+
+describe('describeWorldMoment — phase weather and tomorrow', () => {
+  const afterPhase = PHASES.indexOf('afternoon')
+
+  /** A world and day whose afternoon reads differently from the day-level kind — every other test
+   *  here depends on such a moment existing at all. */
+  function findShiftingMoment(worldId: string): { day: number; kind: WeatherKind; dayKind: WeatherKind } {
+    for (let day = 0; day < DAYS_PER_YEAR; day++) {
+      const afternoon = getPhaseWeather(worldId, day, afterPhase)
+      if (afternoon !== getWeather(worldId, day)) return { day, kind: afternoon, dayKind: getWeather(worldId, day) }
+    }
+    throw new Error(`no phase-shifting day found for ${worldId}`)
+  }
+
+  it('describes the weather of the phase it is asked about, not just the day', () => {
+    const worldId = 'w-phase-aware'
+    const found = findShiftingMoment(worldId)
+    const line = describeWorldMoment({ worldId, characterId: 'c1', day: found.day, phaseIndex: afterPhase })
+    expect(line).toContain(`The weather is ${describeWeather(found.kind)}`)
+    expect(line).not.toContain(`The weather is ${describeWeather(found.dayKind)}`)
+  })
+
+  it('makes the weather clause the prompt sees change as the clock moves inside one day', () => {
+    const worldId = 'w-phase-aware'
+    const found = findShiftingMoment(worldId)
+    const morning = describeWorldMoment({ worldId, characterId: 'c1', day: found.day, phaseIndex: 0 })
+    const afternoon = describeWorldMoment({ worldId, characterId: 'c1', day: found.day, phaseIndex: afterPhase })
+    expect(morning).toContain(`The weather is ${describeWeather(getPhaseWeather(worldId, found.day, 0))}`)
+    expect(afternoon).toContain(`The weather is ${describeWeather(getPhaseWeather(worldId, found.day, afterPhase))}`)
+    expect(morning).not.toBe(afternoon)
+  })
+
+  it('closes with tomorrow\'s outlook, matching getTomorrowForecast', () => {
+    const line = describeWorldMoment({ worldId: 'w1', characterId: 'c1', day: 7, phaseIndex: 2 })
+    expect(line).toContain(`Tomorrow looks ${describeWeather(getTomorrowForecast('w1', 7).kind)}`)
   })
 })

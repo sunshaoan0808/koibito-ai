@@ -173,6 +173,164 @@ export function isDuplicateOfRecentText(candidate: string, recentTexts: (string 
   return false
 }
 
+// --- Full-history (anti-parrot) echo detection -------------------------------------------------
+//
+// `isVerbatimEcho` only ever looks at the ONE message before the candidate, and
+// `isDuplicateOfRecentText` only ever asks whether one text is a substring of another. Neither
+// catches a turn the model rebuilt from an *older* message with a word or two swapped. The pieces
+// below do: one similarity measure over normalised text, a scan of the whole window the caller
+// hands over, and a rate report so a before/after baseline can be quoted instead of guessed.
+
+/** Comparison form of a text: lowercase, letters/digits/whitespace kept, every run of
+ *  markup/punctuation/quotes (`*`, `"`, `,`, `...`) collapsed to a single space. NFKC first, so
+ *  full-width and compatibility glyphs fold onto their plain forms. */
+function normalizeForSimilarity(text: string): string {
+  return text.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+}
+
+/** Only the first N chars of each side enter the edit-distance comparison: a repeat is already
+ *  unmistakable inside that window, and it keeps one bad turn from making the turn cost unbounded. */
+export const SIMILARITY_MAX_LENGTH = 1200
+
+/** Classic two-row Levenshtein distance — insertions, deletions, substitutions. Callers pass the
+ *  shorter string first; the buffer sizes off that side. */
+function editDistance(a: string, b: string): number {
+  if (a === b) return 0
+  const n = a.length
+  const m = b.length
+  if (n === 0) return m
+  if (m === 0) return n
+  if (n > m) return editDistance(b, a)
+  let prev = new Int32Array(n + 1)
+  let cur = new Int32Array(n + 1)
+  for (let i = 0; i <= n; i++) prev[i] = i
+  for (let j = 1; j <= m; j++) {
+    cur[0] = j
+    const bj = b.charCodeAt(j - 1)
+    for (let i = 1; i <= n; i++) {
+      const substitution = prev[i - 1] + (a.charCodeAt(i - 1) === bj ? 0 : 1)
+      const deletion = prev[i] + 1
+      const insertion = cur[i - 1] + 1
+      let best = deletion < insertion ? deletion : insertion
+      if (substitution < best) best = substitution
+      cur[i] = best
+    }
+    const swap = prev
+    prev = cur
+    cur = swap
+  }
+  return prev[n]
+}
+
+/**
+ * How alike two texts are, 0 (nothing in common) to 1 (identical once casing, markup, punctuation
+ * and whitespace are normalised away). 1 - edit distance / longer length, so a single swapped word
+ * in a long turn still scores in the high 0.9s while a genuine continuation lands in the 0.8s. The
+ * one measure both the anti-parrot check and recall dedupe use, so "same text" means one thing
+ * everywhere. Returns 0 as soon as either side normalises away to nothing.
+ */
+export function textSimilarity(a: string, b: string): number {
+  const x = normalizeForSimilarity(a).slice(0, SIMILARITY_MAX_LENGTH)
+  const y = normalizeForSimilarity(b).slice(0, SIMILARITY_MAX_LENGTH)
+  if (!x || !y) return 0
+  if (x === y) return 1
+  return 1 - editDistance(x, y) / Math.max(x.length, y.length)
+}
+
+/** At or above this similarity a prior turn counts as reproduced rather than answered. Calibrated
+ *  against real shapes (see slop.test.ts): exact / whitespace / markup / punctuation variants score
+ *  1.000, a one-word edit 0.94, while a genuine continuation that appends a new sentence scores
+ *  0.87 and is deliberately left alone. */
+export const PARROT_ECHO_THRESHOLD = 0.9
+
+/** Texts shorter than this are never compared here — a short line ("...Fine.") recurs legitimately
+ *  in real dialogue. Mirrors `DUPLICATE_MIN_LENGTH`. */
+export const PARROT_ECHO_MIN_LENGTH = 40
+
+/** A prior turn the candidate reproduces. */
+export interface EchoMatch {
+  /** Index into the array passed as `priorTexts`, so the caller can name which message was echoed. */
+  index: number
+  similarity: number
+  /** The prior text exactly as it was passed in, untouched. */
+  text: string
+}
+
+export interface EchoScanOptions {
+  /** Counts as an echo at or above this similarity. Defaults to `PARROT_ECHO_THRESHOLD`. */
+  threshold?: number
+  /** Skip comparison for texts shorter than this (after trimming). Defaults to `PARROT_ECHO_MIN_LENGTH`. */
+  minLength?: number
+}
+
+/**
+ * Anti-parrot scan over the WHOLE window the caller hands over, not just the message before the
+ * candidate — a turn rebuilt from five messages back is the shape `isVerbatimEcho` cannot see. Pass
+ * pass the full recent history (both roles) as `priorTexts`; the highest-similarity entry wins, ties
+ * resolved toward the earliest index, so the result is order-stable and never depends on iteration
+ * accidents. Returns undefined when nothing in the window is reproduced.
+ */
+export function findEchoMatch(
+  candidate: string,
+  priorTexts: (string | undefined)[],
+  opts: EchoScanOptions = {},
+): EchoMatch | undefined {
+  const threshold = opts.threshold ?? PARROT_ECHO_THRESHOLD
+  const minLength = opts.minLength ?? PARROT_ECHO_MIN_LENGTH
+  const trimmed = typeof candidate === 'string' ? candidate.trim() : ''
+  if (trimmed.length < minLength) return undefined
+
+  let best: EchoMatch | undefined
+  for (let i = 0; i < priorTexts.length; i++) {
+    const raw = priorTexts[i]
+    if (typeof raw !== 'string') continue
+    const prior = raw.trim()
+    if (prior.length < minLength) continue
+    const similarity = textSimilarity(trimmed, prior)
+    if (similarity < threshold) continue
+    if (!best || similarity > best.similarity) best = { index: i, similarity, text: raw }
+  }
+  return best
+}
+
+/** Boolean face of `findEchoMatch`, for callers that only need the yes/no gate. */
+export function isEchoOfHistory(
+  candidate: string,
+  priorTexts: (string | undefined)[],
+  opts: EchoScanOptions = {},
+): boolean {
+  return findEchoMatch(candidate, priorTexts, opts) !== undefined
+}
+
+export interface DuplicateRateReport {
+  /** How many texts were offered, comparable or not. */
+  total: number
+  /** How many were long enough to be compared against earlier ones — the denominator of `rate`. */
+  comparable: number
+  /** How many comparable texts reproduced an earlier text in the same list. */
+  duplicates: number
+  /** `duplicates / comparable`, or 0 when nothing was comparable. */
+  rate: number
+}
+
+/**
+ * Share of a turn list that restates an earlier turn — the number to quote when claiming a
+ * duplicate-line rate improved, measured with the same threshold the live gate uses. Pass the same
+ * history before and after a change to compare like with like; `rate` is 0 for an empty list.
+ */
+export function measureDuplicateRate(texts: string[], opts: EchoScanOptions = {}): DuplicateRateReport {
+  const minLength = opts.minLength ?? PARROT_ECHO_MIN_LENGTH
+  let comparable = 0
+  let duplicates = 0
+  for (let i = 0; i < texts.length; i++) {
+    const text = texts[i]
+    if (typeof text !== 'string' || text.trim().length < minLength) continue
+    comparable += 1
+    if (findEchoMatch(text, texts.slice(0, i), opts)) duplicates += 1
+  }
+  return { total: texts.length, comparable, duplicates, rate: comparable === 0 ? 0 : duplicates / comparable }
+}
+
 const oddCount = (text: string, mark: string): boolean => (text.split(mark).length - 1) % 2 === 1
 
 /** Whether `text` ends on a finished thought — proper terminal punctuation and no unclosed `*`/`"`. */

@@ -6,6 +6,8 @@ import {
   CalendarHeart,
   Clapperboard,
   Download,
+  FileJson,
+  BookOpen,
   Drama,
   GitFork,
   Heart,
@@ -27,6 +29,8 @@ import { IconButton } from '@/components/ui/IconButton'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { scrollToMessage } from '@/lib/scrollToMessage'
 import { buildChatTranscriptHtml, chatTranscriptFilename, downloadChatTranscript } from '@/lib/export/chatTranscript'
+import { chatJsonlFilename, downloadChatJsonl, serializeChatJsonl } from '@/lib/export/chatJsonl'
+import { buildChatEpub, chatEpubFilename, downloadChatEpub } from '@/lib/export/epub'
 import { parseSfxWordList } from '@/lib/text/messageSegments'
 import { useBgmSceneStore } from '@/lib/store/useBgmSceneStore'
 import { errorMessage, toastError } from '@/lib/store/useToastStore'
@@ -68,6 +72,7 @@ import { DirectorPanel } from './DirectorPanel'
 import { TuningPanel } from './TuningPanel'
 import { ReactivePortrait } from './ReactivePortrait'
 import { ScenePanel } from './ScenePanel'
+import { CastCandidatesCard } from './CastCandidatesCard'
 import { nextRoundRobinSpeaker, rosterFrom } from '@/lib/chat/scene'
 import { resolveExpressionSprite } from '@/lib/vn/expressions'
 import { currentOutfitFrom } from '@/lib/vn/outfits'
@@ -180,6 +185,7 @@ export function ChatWindow({
   const [showSearch, setShowSearch] = useState(false)
   const [showPinned, setShowPinned] = useState(false)
   const [showBag, setShowBag] = useState(false)
+  const [showCast, setShowCast] = useState(false)
   const [showDirector, setShowDirector] = useState(false)
   const [showTuning, setShowTuning] = useState(false)
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
@@ -292,6 +298,46 @@ export function ChatWindow({
       toastError(errorMessage(e))
     } finally {
       setExporting(false)
+    }
+  }
+
+  // P2-8: the same chat as JSONL — byte-compatible with SillyTavern's own "Import chat" reader.
+  const exportJsonl = () => {
+    if (!chat) return
+    try {
+      downloadChatJsonl(
+        serializeChatJsonl({
+          messages,
+          userName: persona?.name || 'You',
+          characterName: character?.card.name ?? 'Character',
+        }),
+        chatJsonlFilename(chat.title),
+      )
+    } catch (e) {
+      toastError(errorMessage(e))
+    }
+  }
+
+  // P2-3: the same chat as an EPUB — chapters every `DEFAULT_MESSAGES_PER_CHAPTER` turns, sharing the
+  // HTML transcript's SFX/regex policy so the two exports never disagree about the text.
+  const exportEpub = () => {
+    if (!chat) return
+    try {
+      downloadChatEpub(
+        buildChatEpub({
+          chat,
+          character,
+          persona,
+          messages,
+          regexScripts,
+          sfx: !sfxBursts
+            ? { disabled: true }
+            : { extraWords: [...parseSfxWordList(sfxWords), ...(character?.sfxWords ?? [])] },
+        }),
+        chatEpubFilename(chat.title),
+      )
+    } catch (e) {
+      toastError(errorMessage(e))
     }
   }
 
@@ -471,6 +517,11 @@ export function ChatWindow({
       disabled: exporting,
       onClick: exportTranscript,
     },
+    { key: 'export-jsonl', icon: FileJson, label: 'Export as SillyTavern JSONL', onClick: exportJsonl },
+    { key: 'export-epub', icon: BookOpen, label: 'Export as EPUB', onClick: exportEpub },
+    // P2-6: guests the scene invented, offered as candidates — nothing is created until the writer
+    // clicks promote, and the whole panel is inert while the setting is off.
+    { key: 'cast', icon: Drama, label: 'Dynamic cast', onClick: () => setShowCast(true) },
   ]
   const toolbar = <ChatToolbar tone={toolbarTone} actions={toolbarActions} />
 
@@ -845,6 +896,18 @@ export function ChatWindow({
           onClose={() => setShowSearch(false)}
           onJumpToMessage={jumpToMessage}
           onJumpToChat={jumpToChat}
+        />
+      )}
+      {showCast && (
+        <CastCandidatesCard
+          chatId={chat.id}
+          messages={messages}
+          knownNames={[character?.card.name, ...participantCharacters.map((c) => c.card.name)].filter(
+            (name): name is string => !!name,
+          )}
+          participants={chat.participants ?? []}
+          onSaveParticipants={updateParticipants}
+          onClose={() => setShowCast(false)}
         />
       )}
       {showPinned && (

@@ -1,5 +1,6 @@
 import type { Lorebook } from '@/lib/characters/cardSpec'
 import type { ChatFact } from '@/lib/types'
+import { dedupeRecalledItems, type RecallDedupeOptions } from '@/lib/worldinfo/dedupe'
 
 /**
  * Turns a chat's durable facts into a synthetic constant lorebook, so they ride through the same
@@ -50,4 +51,15 @@ export function buildFactsLorebook(facts: ChatFact[], tokenBudget: number = FACT
       })),
     },
   ]
+}
+
+/**
+ * Drops near-identical facts before they ride the budget cut, so a restatement doesn't spend two
+ * slots saying the same thing. Only near-identical entries collapse (the bands live in `dedupe.ts`);
+ * a fact that adds detail is kept. Wire this in ahead of `buildFactsLorebook` and the surviving
+ * facts flow through the same budget/placement machinery unchanged. Callers that want the audit
+ * trail (what was dropped, at what similarity) can use `dedupeRecalledItems` directly.
+ */
+export function dedupeFacts(facts: ChatFact[], opts: RecallDedupeOptions = {}): ChatFact[] {
+  return dedupeRecalledItems(facts, opts).kept
 }

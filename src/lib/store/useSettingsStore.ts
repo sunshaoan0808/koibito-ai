@@ -15,6 +15,7 @@ import type { QuickReply, RegexScript } from '@/lib/types'
 import type { ThemePreset } from '@/lib/store/themePresets'
 import type { PromptSectionId } from '@/lib/prompt/builder'
 import { DEFAULT_PROMPT_SECTIONS } from '@/lib/prompt/builder'
+import { PARROT_ECHO_THRESHOLD } from '@/lib/text/slop'
 
 /** Seeded on first run only; a returning user's own edits/deletions are never overwritten. */
 const DEFAULT_QUICK_REPLIES: QuickReply[] = [
@@ -226,9 +227,16 @@ interface SettingsState {
 
   // long-term memory
   autoSummarize: boolean
+  /** Similarity at or above which a reply counts as a re-run of earlier history (P2-7). */
+  parrotEchoThreshold: number
+  /** P2-6 guests: 'off' never looks for newcomers; 'suggest' lists them in the chat panel. Nothing
+   *  is ever created without an explicit click either way — there is deliberately no 'auto'. */
+  dynamicCastNpc: 'off' | 'suggest'
   keepRecentMessages: number
   summaryDetail: 'concise' | 'detailed'
   setAutoSummarize: (v: boolean) => void
+  setParrotEchoThreshold: (v: number) => void
+  setDynamicCastNpc: (v: 'off' | 'suggest') => void
   setKeepRecentMessages: (n: number) => void
   setSummaryDetail: (d: 'concise' | 'detailed') => void
 
@@ -456,9 +464,13 @@ export const useSettingsStore = create<SettingsState>()(
       dismissFirstReplyTip: () => set({ firstReplyTipDismissed: true }),
 
       autoSummarize: true,
+      parrotEchoThreshold: PARROT_ECHO_THRESHOLD,
+      dynamicCastNpc: 'off',
       keepRecentMessages: 12,
       summaryDetail: 'concise',
       setAutoSummarize: (v) => set({ autoSummarize: v }),
+      setParrotEchoThreshold: (v) => set({ parrotEchoThreshold: v }),
+      setDynamicCastNpc: (v) => set({ dynamicCastNpc: v }),
       setKeepRecentMessages: (n) => set({ keepRecentMessages: n }),
       setSummaryDetail: (d) => set({ summaryDetail: d }),
 

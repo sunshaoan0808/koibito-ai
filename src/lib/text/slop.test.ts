@@ -3,13 +3,19 @@ import {
   buildSlopAvoidanceNote,
   cleanModelOutput,
   EXPLICIT_ANTI_PATTERN_ENTRIES,
+  findEchoMatch,
   findRepeatedPhrases,
   balanceTrailingMarkup,
   endsCleanly,
   findSlop,
   findSlopAcross,
   isDuplicateOfRecentText,
+  isEchoOfHistory,
   isVerbatimEcho,
+  measureDuplicateRate,
+  PARROT_ECHO_MIN_LENGTH,
+  PARROT_ECHO_THRESHOLD,
+  textSimilarity,
   trimToLastSentence,
 } from './slop'
 
@@ -338,5 +344,147 @@ describe('isDuplicateOfRecentText', () => {
   it('is insensitive to whitespace differences between what was stored and what was just produced', () => {
     const withDifferentSpacing = oldCharTurn.replace(/\s+/g, '\n')
     expect(isDuplicateOfRecentText(withDifferentSpacing, [oldCharTurn])).toBe(true)
+  })
+})
+
+describe('textSimilarity', () => {
+  const line = 'She keeps a photo of her grandmother in her wallet.'
+
+  it('is 1 for the same text', () => {
+    expect(textSimilarity(line, line)).toBe(1)
+  })
+
+  it('falls to 1 once casing, markup, punctuation and whitespace are normalised away', () => {
+    // The shapes a stored fact and its restatement actually differ by.
+    expect(textSimilarity(`*${line}*`, `  ${line.toLowerCase()}  `)).toBe(1)
+    expect(textSimilarity('She keeps a photo\nof her grandmother   in her wallet.', line)).toBe(1)
+    expect(textSimilarity('Likes tea', 'Likes tea.')).toBe(1)
+  })
+
+  it('stays high but below 1 for a single swapped word', () => {
+    const edited = 'He always orders the same thing at the bar on Fridays.'
+    const original = 'He always orders the same thing at the cafe on Fridays.'
+    const similarity = textSimilarity(edited, original)
+    expect(similarity).toBeGreaterThan(0.9)
+    expect(similarity).toBeLessThan(1)
+  })
+
+  it('is low for two unrelated lines', () => {
+    expect(textSimilarity(line, 'She hates the smell of lavender candles.')).toBeLessThan(0.4)
+  })
+
+  it('is symmetric', () => {
+    expect(textSimilarity(line, 'A different line entirely, nothing shared here at all.')).toBe(
+      textSimilarity('A different line entirely, nothing shared here at all.', line),
+    )
+  })
+
+  it('is 0 when either side normalises away to nothing', () => {
+    expect(textSimilarity('', line)).toBe(0)
+    expect(textSimilarity(line, '   ')).toBe(0)
+    expect(textSimilarity('!!! ... ***', line)).toBe(0)
+  })
+})
+
+describe('findEchoMatch / isEchoOfHistory — full-history anti-parrot scan', () => {
+  // A turn the model rebuilt from several messages back. This is the shape the immediate-prior
+  // check (`isVerbatimEcho`) cannot see, and the reason this scan exists.
+  const echoed = 'Sumire would rather walk home in the rain than ask him for the umbrella he keeps in his bag.'
+  const earlier = 'He counts the change twice, then pockets it without meeting her eye.'
+  const middle = 'The bus goes past without stopping and neither of them mentions it.'
+  const immediatePrior = 'She waits under the awning and pretends the rain is not a problem.'
+  const history = [earlier, middle, echoed, immediatePrior]
+
+  it('catches a turn rebuilt verbatim from earlier in the window, which the immediate-prior check misses', () => {
+    // Baseline, on purpose: the old gate only ever looks at the message right before the candidate.
+    expect(isVerbatimEcho(echoed, immediatePrior)).toBe(false)
+    expect(isEchoOfHistory(echoed, history)).toBe(true)
+    expect(findEchoMatch(echoed, history)?.index).toBe(2)
+  })
+
+  it('catches a lightly edited copy of an earlier turn', () => {
+    const original = 'He puts the kettle on before he says anything at all, every time the room goes quiet.'
+    const edited = original.replace('all', 'else')
+    const match = findEchoMatch(edited, ['Something else entirely was said here first.', original])
+    expect(match?.index).toBe(1)
+    expect(match?.similarity).toBeGreaterThanOrEqual(PARROT_ECHO_THRESHOLD)
+    expect(match?.text).toBe(original)
+  })
+
+  it('catches a plain echo that only differs in markup, whitespace and speaker labelling', () => {
+    expect(isEchoOfHistory(`*${echoed}*`, [echoed])).toBe(true)
+    expect(isEchoOfHistory(`Kai: ${echoed}`, [echoed])).toBe(true)
+  })
+
+  it('ignores undefined and empty entries in the window', () => {
+    expect(findEchoMatch(echoed, [undefined, '', '   ', echoed])?.index).toBe(3)
+  })
+
+  it('never flags a short line, even one that recurs verbatim', () => {
+    expect(echoed.length).toBeGreaterThan(PARROT_ECHO_MIN_LENGTH)
+    expect(isEchoOfHistory('...Fine.', ['...Fine.'])).toBe(false)
+    expect(findEchoMatch('...Fine.', ['...Fine.'])).toBeUndefined()
+  })
+
+  it('leaves a genuine continuation alone, even though it opens with the same words', () => {
+    const prior = 'She sets the cup down without looking at him.'
+    const continued = `${prior} Then she leaves without another word.`
+    expect(textSimilarity(continued, prior)).toBeLessThan(PARROT_ECHO_THRESHOLD)
+    expect(isEchoOfHistory(continued, [prior])).toBe(false)
+  })
+
+  it('leaves a genuinely new reply alone', () => {
+    const fresh = 'She tells him about the letter her mother sent and waits for him to answer.'
+    expect(isEchoOfHistory(fresh, history)).toBe(false)
+  })
+
+  it('honours a caller-supplied threshold in both directions', () => {
+    const original = 'He puts the kettle on before he says anything at all, every time the room goes quiet.'
+    const edited = original.replace('all', 'else')
+    // Stricter than the default: the one-word edit no longer counts.
+    expect(isEchoOfHistory(edited, [original], { threshold: 0.999 })).toBe(false)
+    // Looser: a paraphrase the default gate deliberately lets through now counts.
+    const paraphrase = 'He has one sister, Mira, and he mentions her often.'
+    const plain = 'He has a sister named Mira who he mentions often.'
+    expect(textSimilarity(paraphrase, plain)).toBeGreaterThan(0.5)
+    expect(isEchoOfHistory(paraphrase, [plain], { threshold: 0.5 })).toBe(true)
+    expect(isEchoOfHistory(paraphrase, [plain])).toBe(false)
+  })
+
+  it('counts a shorter minimum length when a caller asks it to', () => {
+    expect(findEchoMatch('Oh.', ['Oh.'], { minLength: 2 })?.index).toBe(0)
+  })
+
+  it('returns undefined for an empty window or an unusable candidate', () => {
+    expect(findEchoMatch(echoed, [])).toBeUndefined()
+    expect(findEchoMatch('', [echoed])).toBeUndefined()
+  })
+})
+
+describe('measureDuplicateRate — the baseline number', () => {
+  const a = 'She puts the kettle on and does not say anything for a while.'
+  const b = 'He asks about the letter and she pretends not to hear it the first time.'
+  const c = 'The rain gets louder against the window and neither of them moves.'
+  const shortLine = 'oh.'
+
+  it('is 0 for an empty list and for a history with no repeats', () => {
+    expect(measureDuplicateRate([])).toEqual({ total: 0, comparable: 0, duplicates: 0, rate: 0 })
+    expect(measureDuplicateRate([a, b, c])).toEqual({ total: 3, comparable: 3, duplicates: 0, rate: 0 })
+    // Too short to be comparable at all, so the list contributes nothing to the denominator.
+    expect(measureDuplicateRate([shortLine, shortLine]).rate).toBe(0)
+  })
+
+  it('counts a repeat that comes back later in the history, and skips lines too short to judge', () => {
+    const report = measureDuplicateRate([a, b, c, a, shortLine])
+    expect(report).toEqual({ total: 5, comparable: 4, duplicates: 1, rate: 0.25 })
+  })
+
+  it('measures against the whole history, where an immediate-prior baseline sees nothing', () => {
+    const turns = [a, b, c, a]
+    // Baseline: the old gate only compares a turn with the one before it — 0 duplicates here.
+    const baselineDuplicates = turns.filter((t, i) => i > 0 && isVerbatimEcho(t, turns[i - 1])).length
+    expect(baselineDuplicates).toBe(0)
+    expect(measureDuplicateRate(turns).duplicates).toBe(1)
+    expect(measureDuplicateRate(turns).rate).toBeGreaterThan(baselineDuplicates / turns.length)
   })
 })
