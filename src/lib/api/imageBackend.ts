@@ -33,9 +33,10 @@ export interface ImageBackend {
   listModels(): Promise<string[]>
 }
 
-export type ImageBackendId = 'a1111' | 'comfyui' | 'swarmui' | 'novelai-image' | 'openmayhem'
+export type ImageBackendId = 'a1111' | 'comfyui' | 'swarmui' | 'novelai-image' | 'openmayhem' | 'openai-images'
 
 export const IMAGE_BACKEND_LABELS: Record<ImageBackendId, string> = {
+  'openai-images': 'OpenAI-compatible (any base URL + key)',
   openmayhem: 'OpenMayhem (hosted)',
   a1111: 'Automatic1111 / Forge (local)',
   comfyui: 'ComfyUI (local)',

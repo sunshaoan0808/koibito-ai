@@ -3,6 +3,7 @@ import { ComfyUIClient } from './comfyuiImage'
 import { SwarmUIClient } from './swarmuiImage'
 import { NovelAIImageClient } from './novelaiImage'
 import { OpenMayhemImageClient } from './openMayhemMedia'
+import { OpenAIImagesClient } from './openaiImages'
 import type { ImageBackend, ImageBackendId } from './imageBackend'
 
 export interface ImageBackendSettings {
@@ -20,6 +21,8 @@ export interface ImageBackendSettings {
 /** Section 11's image-backend factory — the `createChatBackend` pattern applied to image generation. */
 export function createImageBackend(settings: ImageBackendSettings): ImageBackend {
   switch (settings.imageBackend) {
+    case 'openai-images':
+      return new OpenAIImagesClient(settings.imageBackendBaseUrl, settings.imageBackendUsername, settings.imageBackendModel)
     case 'openmayhem':
       return new OpenMayhemImageClient(settings.openMayhemApiKey || '', settings.imageBackendModel)
     case 'comfyui':

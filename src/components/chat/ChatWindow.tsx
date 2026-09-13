@@ -24,13 +24,15 @@ import {
 } from 'lucide-react'
 import { useChatSession } from '@/lib/hooks/useChatSession'
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
-import { charactersApi, chatsApi } from '@/lib/api/client'
+import { charactersApi, chatsApi, messagesApi } from '@/lib/api/client'
 import { IconButton } from '@/components/ui/IconButton'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { scrollToMessage } from '@/lib/scrollToMessage'
 import { buildChatTranscriptHtml, chatTranscriptFilename, downloadChatTranscript } from '@/lib/export/chatTranscript'
 import { chatJsonlFilename, downloadChatJsonl, serializeChatJsonl } from '@/lib/export/chatJsonl'
 import { buildChatEpub, chatEpubFilename, downloadChatEpub } from '@/lib/export/epub'
+import { appendImage, generateTurnImage } from '@/lib/image/turnImage'
+import type { SlashOutcome } from '@/lib/chat/slashCommands'
 import { parseSfxWordList } from '@/lib/text/messageSegments'
 import { useBgmSceneStore } from '@/lib/store/useBgmSceneStore'
 import { errorMessage, toastError } from '@/lib/store/useToastStore'
@@ -158,6 +160,35 @@ export function ChatWindow({
     endRelationship,
     forkChat,
   } = useChatSession(chatId)
+
+  const imageBackend = useSettingsStore((s) => s.imageBackend)
+  const imageBackendBaseUrl = useSettingsStore((s) => s.imageBackendBaseUrl)
+  const imageBackendUsername = useSettingsStore((s) => s.imageBackendUsername)
+  const imageBackendPassword = useSettingsStore((s) => s.imageBackendPassword)
+  const imageBackendModel = useSettingsStore((s) => s.imageBackendModel)
+  const openMayhemApiKey = useSettingsStore((s) => s.openMayhemApiKey)
+
+  /**
+   * P2-5's `/image`: generate one image and attach it to the newest reply. A missing backend comes
+   * back as a toast naming what to fill in, because a command that quietly does nothing is worse
+   * than one that explains why it can't.
+   */
+  const runImageCommand = async (prompt: string): Promise<SlashOutcome> => {
+    const target = [...(messages ?? [])].reverse().find((m) => m.role === 'char')
+    if (!target) return { kind: 'toast', tone: 'error', message: 'No reply to attach an image to yet.' }
+    try {
+      const { dataUrl } = await generateTurnImage({
+        settings: { imageBackend, imageBackendBaseUrl, imageBackendUsername, imageBackendPassword, imageBackendModel, openMayhemApiKey },
+        prompt,
+      })
+      // Re-read first: the turn may already carry images (one turn can gather several).
+      const fresh = await messagesApi.get(target.id)
+      await messagesApi.update(target.id, { images: appendImage(fresh?.images, dataUrl) })
+      return { kind: 'toast', tone: 'info', message: 'Image attached to the last reply.' }
+    } catch (e) {
+      return { kind: 'toast', tone: 'error', message: e instanceof Error ? e.message : String(e) }
+    }
+  }
 
   const globalVisualNovelMode = useSettingsStore((s) => s.visualNovelMode)
   const vnInputMode = useSettingsStore((s) => s.vnInputMode)
@@ -675,6 +706,7 @@ export function ChatWindow({
       onAbort={abortGeneration}
       onContinue={continueMessage}
       onImpersonate={impersonate}
+      onImageCommand={runImageCommand}
       canUndoLastContinue={canUndoLastContinue}
       onUndoLastContinue={undoLastContinue}
       onRegenerateLastContinueSegment={regenerateLastContinueSegment}

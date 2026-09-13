@@ -243,7 +243,7 @@ describe('runSlashCommand', () => {
     for (const command of SLASH_COMMANDS) expect(outcome.message).toContain(command.usage)
   })
 
-  it('reports an unfinished /image instead of failing silently', () => {
+  it('reports an unwired /image instead of failing silently', () => {
     const outcome = runSlashCommand('/image a rainy rooftop') as SlashOutcome
     expect(outcome.kind).toBe('toast')
     if (outcome.kind !== 'toast') return

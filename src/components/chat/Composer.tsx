@@ -5,7 +5,7 @@ import { readAttachment, type PendingAttachment } from '@/lib/attachments'
 import { startDictation, sttSupported, type DictationHandle } from '@/lib/voice/dictation'
 import { t } from '@/lib/i18n'
 import { toastError, toastInfo } from '@/lib/store/useToastStore'
-import { SLASH_COMMANDS, isSlashInput, runSlashCommand, slashCommandDraft, type SlashOutcome } from '@/lib/chat/slashCommands'
+import { SLASH_COMMANDS, isSlashInput, runSlashCommand, slashCommandDraft, type SlashCommandHandlers, type SlashOutcome } from '@/lib/chat/slashCommands'
 
 interface ComposerProps {
   value: string
@@ -17,6 +17,8 @@ interface ComposerProps {
   onAbort: () => void
   onContinue: () => void
   onImpersonate: () => Promise<string>
+  /** P2-5's `/image` pipeline, injected from the chat window (which owns settings + the message list). Omitted means `/image` reports itself as unwired instead of guessing. */
+  onImageCommand?: SlashCommandHandlers['image']
   /** Whether the last message has a "Continue" segment that can be undone/regenerated — hides both controls when false. */
   canUndoLastContinue?: boolean
   onUndoLastContinue?: () => void
@@ -45,6 +47,7 @@ export function Composer({
   onAbort,
   onContinue,
   onImpersonate,
+  onImageCommand,
   canUndoLastContinue = false,
   onUndoLastContinue,
   onRegenerateLastContinueSegment,
@@ -107,9 +110,9 @@ export function Composer({
 
   /** Returns true when the draft was consumed as a slash command. */
   const runSlashInput = (raw: string): boolean => {
-    const outcome = runSlashCommand(raw)
+    const outcome = runSlashCommand(raw, { image: onImageCommand })
     if (!outcome) return false
-    // Only an injected handler can be async (P2-5's image pipeline) — no handler is wired here.
+    // Only the injected image handler can be async (P2-5's pipeline) — every other command resolves synchronously.
     if (outcome instanceof Promise) {
       onChangeValue('')
       outcome.then(applySlashOutcome, (e) => setComposerError(e instanceof Error ? e.message : String(e)))

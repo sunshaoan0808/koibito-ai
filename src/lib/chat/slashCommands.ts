@@ -43,7 +43,7 @@ export interface SlashCommandDef {
 
 /** The registry, in the order `/help` and the hint chips display it. */
 export const SLASH_COMMANDS: SlashCommandDef[] = [
-  { name: 'image', aliases: ['img'], usage: '/image <描述>', summary: '按描述生成一张图（生图后端尚未接线）' },
+  { name: 'image', aliases: ['img'], usage: '/image <描述>', summary: '按描述生成一张图，挂到最后一条回复' },
   { name: 'skip', aliases: [], usage: '/skip', summary: '跳过你的回合，让角色把这段继续演下去' },
   { name: 'ooc', aliases: [], usage: '/ooc <内容>', summary: '以戏外旁白发送，不打断角色扮演' },
   { name: 'roll', aliases: ['r'], usage: '/roll [NdM+K]', summary: '掷骰并给出点数，默认一颗二十面骰' },
@@ -209,7 +209,7 @@ export interface SlashCommandHandlers {
   rng?: SlashRng
 }
 
-const IMAGE_NOT_WIRED = '生图后端尚未接线（P2-5），这条 /image 已记下但没有执行。'
+const IMAGE_NOT_WIRED = '这个入口未接线到生图管线（P2-5 的管线由聊天窗口注入），这条 /image 已记下但没有执行。'
 
 /** What `/ooc` wraps a line in, matching the asides `text/slop.ts` already recognises. */
 const OOC_PREFIX = '(OOC: '

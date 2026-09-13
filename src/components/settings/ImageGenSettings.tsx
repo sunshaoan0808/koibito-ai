@@ -13,10 +13,11 @@ import { SettingsPage } from '@/components/ui/SettingsPage'
 
 const IMAGE_BACKENDS = Object.keys(IMAGE_BACKEND_LABELS) as ImageBackendId[]
 
-const LOCAL_BACKEND_DEFAULTS: Record<'a1111' | 'comfyui' | 'swarmui', string> = {
+const LOCAL_BACKEND_DEFAULTS: Record<'a1111' | 'comfyui' | 'swarmui' | 'openai-images', string> = {
   a1111: 'http://127.0.0.1:7860',
   comfyui: 'http://127.0.0.1:8188',
   swarmui: 'http://127.0.0.1:7801',
+  'openai-images': 'https://your-image-endpoint.example/v1',
 }
 
 export function ImageGenSettings() {
@@ -30,7 +31,7 @@ export function ImageGenSettings() {
   const { models, loading, reload } = useOpenMayhemModels('IMAGES', imageBackend === 'openmayhem')
   const [preview, setPreview] = useState('')
 
-  const isLocal = imageBackend === 'a1111' || imageBackend === 'comfyui' || imageBackend === 'swarmui'
+  const isLocal = imageBackend === 'a1111' || imageBackend === 'comfyui' || imageBackend === 'swarmui' || imageBackend === 'openai-images'
 
   return (
     <SettingsPage>
@@ -78,7 +79,7 @@ export function ImageGenSettings() {
             label="Server URL"
             value={imageBackendBaseUrl}
             onChange={(e) => setImageBackendConfig({ imageBackendBaseUrl: e.target.value })}
-            placeholder={LOCAL_BACKEND_DEFAULTS[imageBackend as 'a1111' | 'comfyui' | 'swarmui']}
+            placeholder={LOCAL_BACKEND_DEFAULTS[imageBackend as keyof typeof LOCAL_BACKEND_DEFAULTS]}
           />
         )}
 
@@ -100,6 +101,23 @@ export function ImageGenSettings() {
               value={imageBackendPassword}
               onChange={(e) => setImageBackendConfig({ imageBackendPassword: e.target.value })}
             />
+          </>
+        )}
+
+        {imageBackend === 'openai-images' && (
+          <>
+            <TextField
+              label="API key (optional for a local relay)"
+              type="password"
+              value={imageBackendUsername}
+              onChange={(e) => setImageBackendConfig({ imageBackendUsername: e.target.value })}
+            />
+            <p className="mb-2 text-xs text-text-muted">
+              Sends <code className="font-mono">POST /v1/images/generations</code> with{' '}
+              <code className="font-mono">response_format: b64_json</code> to the Server URL above,
+              so any relay that mirrors the OpenAI image shape works. Size is sent as a keyword
+              (1024x1024 / 1024x1792 / 1792x1024), since that's all the shape carries.
+            </p>
           </>
         )}
 
