@@ -12,10 +12,10 @@
 | 动作 | 内容 |
 |---|---|
 | ❌ 删除幽灵项 | 旧版 22 个未勾选项里，有 5 类引用了**不存在的文件**（`src/lib/journal.ts`、`chaos-events.ts`、`JournalPanel.tsx`、`relationshipValidator.ts`、`characterCard.ts`），已全部按真实落点重写或删除 |
-| 🔢 修正数字 | 测试"800+"→ **116 文件 / ~2,156 用例**；Chaos 事件"24 个"→ **70 条**；i18n 从"待做"→ **已完成**；`strict: true` 从"待开启"→ **已开启** |
+| 🔢 修正数字 | 测试"800+"→ **116 文件 / ~2,156 用例**（P1-1 交付后为 **117 文件 / 2,170 用例**）；Chaos 事件"24 个"→ **70 条**；i18n 从"待做"→ **已完成**；`strict: true` 从"待开启"→ **已开启** |
 | ✅ 删除已解决项 | 移动端适配（`RelationshipPanel` 已响应式）、日记虚拟滚动（无该组件，前提不成立）、STT（`voice/stt.ts`+`vad.ts`+`dictation.ts` 已实现）、类型严格化（已开） |
 | ➕ 新增真实缺口 | 来自 2026-09-13 代码对账的 P1/P2 项（成长回写、时间流逝、Chaos 扩容、TTS 通道、Clock In、小时天气、EPUB、斜杠命令、聊天内生图、动态 NPC、记忆去重、BYAF/JSONL） |
-| 🔒 保留 | 旧版唯一真实待办 `exportWithGrowth()` 成长回写 → P1-1 |
+| ✅ 落地 | 旧版唯一真实待办 `exportWithGrowth()` 成长回写 → **P1-1 已完成**（`19f1111`） |
 
 > **旧版 `DEVELOPMENT_PLAN.md` 的 Phase 1 里有 2 项"已完成但被写成未完成"**（移动端、虚拟滚动），照旧版干活会重复劳动——本版已清除。
 
@@ -53,7 +53,7 @@
 
 | ID | 任务 | 落点 / 地基 | 验收标准 | 估量 |
 |---|---|---|---|---|
-| **P1-1** | **成长回写角色卡（AI Enhance）**：把养出来的年轮/关系/心结烘焙进卡，导出即可带走 | 新增 `exportWithGrowth()`（建议 `src/lib/characters/exportWithGrowth.ts`）；`cardSpec.ts` 已支持 `extensions` 透传（:286 / :323 / :340）；年轮数据来自 `realism/engine.ts` | 导出 JSON 含 `growth` 区块（年轮/关系阶段/心结/关键记忆）；重新导入后角色状态可回读；≥5 个单测；导出 UI 有开关（默认关） | 2~3 天 |
+| **P1-1 ✅(`19f1111`)** | **成长回写角色卡（AI Enhance）**：把养出来的年轮/关系/心结烘焙进卡，导出即可带走 | 已落地 `src/lib/characters/exportWithGrowth.ts`（纯函数 `buildGrowthSnapshot` 等 + `loadGrowthSnapshot` 取数层）；`cardSpec.ts` 的 `extensions` 透传（:286 / :323 / :340）承接快照；年轮数据来自 `realism/engine.ts` | 导出 JSON 含 `extensions.rp_growth`（年轮/日记/关系阶段/心结/关键记忆）；重新导入后 `readGrowth` 可回读；**14 个单测**；导出 UI 有开关（默认关）+ 规模预览 | 已交付 |
 | **P1-2** | **自动时间流逝**：按一轮叙事时长推导推进时段，日历/精力/日记时间戳联动；OOC 可跳时 | `src/lib/world/calendar.ts`（新增 `deriveElapsedPhases` / `reasonedAdvance`）；现仅 `WorldsView.tsx:476` 手动 `advancePhase` | 每回合推进 0~3 时段且可解释；日历、剩余精力、日记时间戳三者一致；提供"关闭自动推进"开关；边界（深夜/跨日/跨月）有单测 | 3~5 天 |
 | **P1-3** | **Chaos 事件池扩容** 70 → 150+ | `src/lib/realism/engine.ts:310–387` | 实测条数 ≥150；五风味各 ≥24；`spicy` 提至 ≥30；无重复文案；`engine.test.ts` 全绿 | 1 天 |
 | **P1-4** | **TTS 通道打通**（配置侧，非写码） | 前端 `src/lib/voice/cloudTts.ts:43` 已打 `/api/llm/v1/audio/speech`；需在自己的网关上开 TTS 路由 | 设置页"语音"测试按钮出声；长文按 `sentenceChunker` 分句、不截断；`VoiceSettings` 各 provider 可切换 | 0.5 天（取决于网关） |
