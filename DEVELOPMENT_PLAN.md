@@ -46,7 +46,7 @@
 |---|---|---|---|---|
 | P0-1 ✅(`11a4269`) | 修 3 处中文文案英文残渣 | `src/lib/realism/engine.ts:321`（`accidentally`）、`:323`（`minimum 奖`）、`:524`（`soft 一瞬`） | `grep -n "accidentally\|minimum 奖\|soft 一瞬" src/lib/realism/engine.ts` 无命中；`npm test` 全绿 | 10 分钟 |
 | P0-2 ✅(`11a4269`) | 同步过期文件头注释 | `server/llmProxy.ts:1–20` 仍写"Sessions live in memory — restarting the server logs everyone out"，实际 `:54–56` 已是 HMAC 确定性 token（重启不掉登录） | 注释与实现一致；无功能改动 | 10 分钟 |
-| P0-3 | 文档纪律落地：本文件 + `PROJECT_SUMMARY.md` 成为权威源，其余文档不再各自维护待办 | 仓库根 `*.md` | 幽灵路径黑名单（§7-2）在文档中 0 命中（黑名单清单除外） | 30 分钟 |
+| P0-3 ✅(2026-09-13 复核) | 文档纪律落地：本文件 + `PROJECT_SUMMARY.md` 成为权威源，其余文档不再各自维护待办 | 仓库根 `*.md`：`PROJECT_SUMMARY.md` 头部已声明"项目现状快照"定位并指向本文件（待办/排期）+ `docs/ABSORPTION-PLAN.md`（吸收进度）；`ROADMAP.md` / `TODO.md` 作为上游原文**只读**，不在其中新建待办 | 幽灵路径黑名单（§7-2）在文档中 **0 命中**：`python3 tools/audit/check_pre_commit.py` → "幽灵引用 0 处…结论：可以提交"；同一闸门扫本轮改动文件敏感串 0、单文件体积 0 超限 | 已交付 |
 | P0-4 ✅(`11a4269`) | **修源码注释乱码**（GBK/UTF-8 误码）：英文注释里的破折号 `—` 被写成 `鈥?` | `src/components/chat/MessageBubble.tsx`（17 行）、`src/components/chat/ChatsPanel.tsx`（13 行） | `python3 tools/audit/scan_cjk_pollution.py` 的 MOJIBAKE 计数 = 0；`npm test` 全绿；diff 仅限注释 | 30 分钟 |
 
 ### P1 — 核心价值（≈2 周）
