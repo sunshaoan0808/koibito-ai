@@ -12,10 +12,10 @@
 | 动作 | 内容 |
 |---|---|
 | ❌ 删除幽灵项 | 旧版 22 个未勾选项里，有 5 类引用了**不存在的文件**（`src/lib/journal.ts`、`chaos-events.ts`、`JournalPanel.tsx`、`relationshipValidator.ts`、`characterCard.ts`），已全部按真实落点重写或删除 |
-| 🔢 修正数字 | 测试"800+"→ **116 文件 / ~2,156 用例**（P1-1 交付后为 **117 文件 / 2,170 用例**；P1-2 交付后为 **117 文件 / 2,191 用例**；P1-3 交付后为 **117 文件 / 2,192 用例**）；Chaos 事件"24 个"→ **152 条**（P1-3 扩容后实测，`tools/audit/count_chaos_pool.py`）；i18n 从"待做"→ **已完成**；`strict: true` 从"待开启"→ **已开启** |
+| 🔢 修正数字 | 测试"800+"→ **116 文件 / ~2,156 用例**（P1-1 交付后为 **117 文件 / 2,170 用例**；P1-2 交付后为 **117 文件 / 2,191 用例**；P1-3 交付后为 **117 文件 / 2,192 用例**；P2 批次交付后为 **125 文件 / 2,431 用例**）；Chaos 事件"24 个"→ **152 条**（P1-3 扩容后实测，`tools/audit/count_chaos_pool.py`）；i18n 从"待做"→ **已完成**；`strict: true` 从"待开启"→ **已开启** |
 | ✅ 删除已解决项 | 移动端适配（`RelationshipPanel` 已响应式）、日记虚拟滚动（无该组件，前提不成立）、STT（`voice/stt.ts`+`vad.ts`+`dictation.ts` 已实现）、类型严格化（已开） |
 | ➕ 新增真实缺口 | 来自 2026-09-13 代码对账的 P1/P2 项（成长回写、时间流逝、Chaos 扩容、TTS 通道、Clock In、小时天气、EPUB、斜杠命令、聊天内生图、动态 NPC、记忆去重、BYAF/JSONL） |
-| ✅ 落地 | 旧版唯一真实待办 `exportWithGrowth()` 成长回写 → **P1-1 已完成**（`19f1111`）；自动时间流逝 → **P1-2 已完成**（`b607209`）；Chaos 事件池扩容 → **P1-3 已完成**（`38bb4c6`） |
+| ✅ 落地 | 旧版唯一真实待办 `exportWithGrowth()` 成长回写 → **P1-1 已完成**（`19f1111`）；自动时间流逝 → **P1-2 已完成**（`b607209`）；Chaos 事件池扩容 → **P1-3 已完成**（`38bb4c6`）；P2 批次（P2-1~P2-4、P2-6~P2-8）→ **已完成**（`fe21877`），**P2-5 挂起**（本机无生图上游） |
 
 > **旧版 `DEVELOPMENT_PLAN.md` 的 Phase 1 里有 2 项"已完成但被写成未完成"**（移动端、虚拟滚动），照旧版干活会重复劳动——本版已清除。
 
@@ -62,14 +62,14 @@
 
 | ID | 任务 | 落点 / 地基 | 验收标准 | 估量 |
 |---|---|---|---|---|
-| P2-1 | Clock In 职业班表：哪几天/几点上下班、跳回合横幅、迟到后果 | 地基 `Character.schedule` + `getCurrentActivity`；新增 `src/lib/world/workSchedule.ts` | 班表可编辑；到点出现上下班提示；跨周重复；与日计划精力互不冲突 | 2~3 天 |
-| P2-2 | 小时级天气引擎：日内变化、温度曲线、明日预报 | `src/lib/world/calendar.ts`（现仅时段级 `describeWeather`） | 同一时段内天气可变；预报命中率可测（确定性种子）；注入提示词的天气串随时间变化 | 1 周 |
-| P2-3 | EPUB 导出 + 有声书（TTS 串流成音频） | `src/lib/export/chatTranscript.ts`（已有 HTML 记录管线） | 导出的 epub 在 Apple Books / Calibre 可读、目录按章；有声书按消息分轨 | 2~3 天（EPUB 部分可独立交付；**有声书半边依赖 P1-4，现挂起**） |
-| P2-4 | 斜杠命令（`/image` `/skip` `/ooc` `/roll`…） | 复用命令面板（#74）的注册表与补全 | 聊天输入框内触发；与现有 OOC/分叉不冲突；有 `/help` 列表 | 3~5 天 |
-| P2-5 | 聊天内图片工作流：`/image`、图生图 Edit、即时场景快照 | 后端**齐备**：`api/{a1111,comfyui,swarmui,novelai,openMayhem}Image.ts` + `createImageBackend.ts` | 聊天中一句话出图并回显；图生图能引用上一条图片；失败有明确错误态 | 1 周 |
-| P2-6 | 动态客串 NPC：路人在场景中被自动创造并入戏 | 新增 cast detector；注意 `dating/sceneParticipants.ts` 是**亲密场景共享状态**，不是路人检测 | 群场景中临时角色可被"扶正"为常驻；不污染既有角色库；可关 | 1 周 |
-| P2-7 | 记忆去重与反鹦鹉全量 | 已有 `text/slop.ts` 的 `isVerbatimEcho` + `worldinfo/facts.ts` 预算上限 | 召回结果去重（相似度阈值可配）；重复台词率有基线对比；不过度删减有效记忆 | 2 天 |
-| P2-8 | BYAF 导入 / SillyTavern JSONL 导出 | `characters/importExport.ts`（已有 PNG/JSON V2/V3） | 能导入 BYAF 卡；导出的 JSONL 可被 ST 直读；round-trip 无损 | 1~2 天 |
+| **P2-1 ✅(`fe21877`)** | **Clock In 职业班表**：哪几天/几点上下班、跳回合横幅、迟到后果 | 已落地 `src/lib/world/workSchedule.ts`（`workScheduleGuidance` / `clockBoundaryNote` 纯函数；班表数据沿用 `Character.schedule` + `getCurrentActivity` 地基）；接线 `useChatSession.ts` 提示词注入 + 自动推进/手动推进两处边界提示 | 上下班提示进提示词与回合文案；跨周重复、迟到后果、边界日**28 个新单测**全绿；全量 125 文件 / 2,431 用例绿 | 已交付 |
+| **P2-2 ✅(`fe21877`)** | **小时级天气引擎**：日内变化、温度曲线、明日预报 | 已落地 `src/lib/world/calendar.ts`（`getPhaseWeather` / `getDayPhaseWeather` / `isWeatherDrift` / `getTomorrowForecast`，+130 行）；`describeWorldMoment`（calendar.ts:296）改用相位天气 + 明日预报，注入提示词的天气串随时段走；`WorldsView` 面板显示相位天气与次日预报 | 同一时段内天气可变、漂移可测（确定性种子，**+212 行单测**）；`npx vitest run src/lib/world` **322 用例绿**；提示词天气串取自相位而非仅日级 | 已交付 |
+| **P2-3 ✅(`fe21877`)** | **EPUB 导出**（有声书半边仍挂 P1-4） | 已落地 `src/lib/export/epub.ts`（自研 zip 写入器，**零新依赖**）+ `ChatWindow` 工具栏「Export as EPUB」，与 HTML 转写共用 SFX/regex 策略 | **22 个单测**用独立 zip 重读器验证 mimetype 首位/CRC、container.xml、OPF（spine/nav/ncx）——结构合法性由测试锁死；"Apple Books / Calibre 真机打开"属人工验收项 | 已交付（EPUB 部分） |
+| **P2-4 ✅(`fe21877`)** | **斜杠命令**（`/image` `/skip` `/ooc` `/roll`…） | 已落地 `src/lib/chat/slashCommands.ts`（命令表 + 解析 + 异步 outcome）+ `Composer.tsx` 接线（提示芯片、未注册命令回落普通发送）；`/image` 为占位，指向 P2-5 | `npx vitest run src/lib/chat` **116 用例绿**；与 OOC/分叉不冲突；`/help` 列表在命令面板 | 已交付 |
+| **P2-5 ⏸️(挂起 2026-09-13，待生图上游)** | **聊天内图片工作流**：`/image`、图生图 Edit、即时场景快照 | 后端文件**齐备**：`api/{a1111,comfyui,swarmui,novelai,openMayhem}Image.ts` + `createImageBackend.ts`。**代码侧未交付**（子线额度耗尽，只完成侦察）。**卡点＝本机无可用生图上游**（2026-09-13 实测）：`useSettingsStore` 默认 `imageBackend: 'a1111'` 而 `imageBackendBaseUrl` 为**空**；7860/8188/7861 全关；`:8001` 在跑但需鉴权（`Missing or invalid Authorization header`，http 401） | 恢复条件：填 `imageBackendBaseUrl`（或换后端类型 + 凭证）后落刀：`/image` 出图回显、图生图引用上一条图片、失败有明确错误态 | 1 周（取决于上游） |
+| **P2-6 ✅(`fe21877`)** | **动态客串 NPC**：路人在场景中被识别并入戏 | 已落地 `src/lib/cast/detector.ts`（中英双轨抽取：敬称 / 言语动词 / 前缀昵称 / 拉丁专名，函数词与停用词过滤，扫描窗 8 回合）、`src/lib/cast/promote.ts`（`candidateToCharacterInput` / `withPromotedParticipant` / `promoteCandidate`：**先建角色后入名册**，create 失败零写入）、`src/components/chat/CastCandidatesCard.tsx`（候选面板：扶正 / 忽略，忽略按 chat 持久化）+ `ChatWindow` 工具栏「Dynamic cast」；开关 `useSettingsStore.dynamicCastNpc`（**默认 off**）；提示词行 `strongCandidates` 上限 3。**未碰** `dating/sceneParticipants.ts`（亲密共享态） | **27 个新单测**；点击前**零写入**（用例断言先 create 后 update，create 失败不写聊天）；off 时不跑检测；只有重复出现（≥2 次）的强候选进提示词，上限 3 | 已交付 |
+| **P2-7 ✅(`fe21877`)** | **记忆去重与反鹦鹉全量** | 已落地 `src/lib/worldinfo/dedupe.ts`（**19 用例**）+ `text/slop.ts` 扩相似度/回声扫描（阈值可配）；接线三处：召回先去重、全量回声护栏、设置页**复读阈值**滑块 0.50~1.00 | `dedupe` 19/19 绿，`slop`/`facts` 全绿；"去重不误删有效记忆"由用例覆盖 | 已交付 |
+| **P2-8 ✅(`fe21877`)** | **BYAF 导入 / SillyTavern JSONL 导出** | 已落地 `src/lib/characters/byaf.ts`（zip 中央目录解析 + `DecompressionStream`，零新依赖；archive/扁平卡双形态 + 宏转换）与 `src/lib/export/chatJsonl.ts`；`ChatWindow` 加「Export as SillyTavern JSONL」；顺带修子线缺陷：扁平卡 `{character}` 宏未转换 | **53 个单测**（含 round-trip 无损）；导出 JSONL 的头部/消息形状按 ST 格式断言 | 已交付 |
 
 ### P3 — 上游 `TODO.md` 未勾 **23 项**（原文见 `TODO.md`，此处只标位与分组，勿重复复制）
 
@@ -171,7 +171,7 @@
 | `tools/audit/scan_cjk_pollution.py` | 中文文案英文残渣 + **GBK 误码/乱码**扫描（**建议纳入 CI**） |
 | `tools/audit/count_scale.py` | 规模基线：文件 / 行数 / 测试用例 / 事件池 / 模块数 |
 | `tools/audit/count_chaos_pool.py` | 命运轮盘逐风味配额 + 归一化查重 + `--check` 验收（P1-3 口径） |
-| `tools/audit/check_gaps.py` | **缺口复核**：P1/P2 各项机制是否已实现（OK / GAP） |
+| `tools/audit/check_gaps.py` | **缺口复核**：P1/P2 各项机制是否已实现，**三档口径**（OK / **WIRED＝代码已接线但验收缺外部上游** / GAP），底部印口径说明防误读 |
 | `tools/audit/dump_open_items.py` | TODO.md / ROADMAP.md 未勾项 + 所属分组 |
 | `tools/audit/scan_checkboxes.py` | 全库未勾选复选框分布统计 |
 | `tools/audit/README.md` | 用法 / 退出码约定 / 维护约定 |
