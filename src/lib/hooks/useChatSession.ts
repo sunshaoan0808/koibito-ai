@@ -74,7 +74,9 @@ import {
   describeWeather,
   describeWorldMoment,
   detectNarratedPhase,
+  deriveElapsedPhases,
   getCalendarInfo,
+  reasonedAdvance,
   resolveScheduledPresence,
   getEnergyRemaining,
   getWeather,
@@ -89,6 +91,8 @@ import {
   REPAIR_ARM_THRESHOLD,
   chaosRoll,
   chaosSpicyEnabled,
+  addJournalFromTurn,
+  coolJournal,
   decayNeeds,
   mergeRings,
   nextBondLongTerm,
@@ -431,6 +435,7 @@ export function useChatSession(chatId: string | null) {
   const keepRecentMessages = useSettingsStore((s) => s.keepRecentMessages)
   const summaryDetail = useSettingsStore((s) => s.summaryDetail)
   const autoDetectTasks = useSettingsStore((s) => s.autoDetectTasks)
+  const autoAdvanceTime = useSettingsStore((s) => s.autoAdvanceTime)
   const autoTrackRelationship = useSettingsStore((s) => s.autoTrackRelationship)
   const relationshipDifficulty = useSettingsStore((s) => s.relationshipDifficulty)
   const autoSuggestChoices = useSettingsStore((s) => s.autoSuggestChoices)
@@ -1416,6 +1421,19 @@ export function useChatSession(chatId: string | null) {
       let repairNext = repairResult.state
       if (repairNext) repairNext = { loss: Math.max(repairNext.loss, totalTrustLoss) }
       else if (totalTrustLoss >= REPAIR_ARM_THRESHOLD) repairNext = { loss: totalTrustLoss }
+      // Diary: everything written in an earlier turn cools by one reply, then this turn's facts (and
+      // any sizeable warmth move) are appended. Stamped with a freshly-read world clock so the
+      // entry's time agrees with the calendar and the energy the player sees, even when the clock
+      // was advanced earlier in this very turn.
+      const clockForJournal = world ? await worldsApi.get(world.id) : null
+      const journalNext = addJournalFromTurn(coolJournal(realismBefore.journal), {
+        replyIndex: charRepliesNow,
+        newFacts,
+        affectionDelta: deltas.affection,
+        world: clockForJournal
+          ? { day: clockForJournal.currentDay ?? 0, phaseIndex: clockForJournal.currentPhaseIndex ?? 0 }
+          : undefined,
+      })
       const nextRealism: RealismState = {
         promises: promiseResult.state,
         bondLongTerm,
@@ -1426,6 +1444,7 @@ export function useChatSession(chatId: string | null) {
         needs,
         chaosPressure: chaos.pressure,
         pendingEvent: chaos.event ?? null,
+        journal: journalNext,
       }
       const noRealismChange = JSON.stringify(nextRealism) === JSON.stringify(realismBefore)
       newFlags.forEach((flag) => existingFlags.add(flag))
@@ -3214,6 +3233,35 @@ export function useChatSession(chatId: string | null) {
             await chatsApi.update(chatId, {
               scene: { turnPolicy: 'manual', ...freshChat.scene, timePhase: nextPhaseOverride },
             })
+          }
+        }
+
+        // Auto-advance the shared world clock from what this turn narrated, so the calendar, the
+        // remaining energy and the diary stamps keep up with the scene instead of waiting on an
+        // explicit action. Deterministic and explainable (`deriveElapsedPhases`); a turn naming no
+        // time, or pointing back at a phase already passed today, moves nothing. The per-chat
+        // override just set above ends up naming the same phase the clock lands on, so it can never
+        // go stale against it.
+        if (autoAdvanceTime && world) {
+          // Cheap first pass off the rendered clock: if this turn narrates no time at all, stop here
+          // and skip the network round-trip.
+          const hint = deriveElapsedPhases({
+            text: composedText,
+            day: world.currentDay ?? 0,
+            phaseIndex: world.currentPhaseIndex ?? 0,
+          })
+          if (hint.days > 0 || hint.phases > 0) {
+            // Re-read for the real baseline: another chat in the same world may have moved this
+            // clock since render, and the walk must start from what is actually persisted.
+            const clockWorld = await worldsApi.get(world.id)
+            const fromDay = clockWorld?.currentDay ?? 0
+            const fromPhase = clockWorld?.currentPhaseIndex ?? 0
+            const elapsed = deriveElapsedPhases({ text: composedText, day: fromDay, phaseIndex: fromPhase })
+            const advanced = reasonedAdvance(fromDay, fromPhase, elapsed)
+            if (advanced.day !== fromDay || advanced.phaseIndex !== fromPhase) {
+              await worldsApi.update(world.id, { currentDay: advanced.day, currentPhaseIndex: advanced.phaseIndex })
+              toastInfo(`Time passes — ${advanced.note}`)
+            }
           }
         }
 

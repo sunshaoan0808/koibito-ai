@@ -236,6 +236,12 @@ interface SettingsState {
   autoDetectTasks: boolean
   setAutoDetectTasks: (v: boolean) => void
 
+  // world clock
+  /** Moves a world's clock forward from what a turn narrates ("the next morning"), so the calendar,
+   *  remaining energy and diary stamps keep up with the scene instead of waiting on a button press. */
+  autoAdvanceTime: boolean
+  setAutoAdvanceTime: (v: boolean) => void
+
   // dating-sim relationship tracking
   autoTrackRelationship: boolean
   setAutoTrackRelationship: (v: boolean) => void
@@ -458,6 +464,11 @@ export const useSettingsStore = create<SettingsState>()(
 
       autoDetectTasks: true,
       setAutoDetectTasks: (v) => set({ autoDetectTasks: v }),
+
+      // On by default: the derivation only moves the clock when a turn actually narrates time
+      // passing, so a chat that stays put in one moment costs nothing.
+      autoAdvanceTime: true,
+      setAutoAdvanceTime: (v) => set({ autoAdvanceTime: v }),
 
       autoTrackRelationship: true,
       setAutoTrackRelationship: (v) => set({ autoTrackRelationship: v }),

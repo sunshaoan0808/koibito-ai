@@ -253,14 +253,174 @@ const PHASE_CUES: { re: RegExp; phase: DayPhase }[] = [
  *  undefined when nothing time-anchoring is said. First-match wins on the ordered list above, so a
  *  message that only mentions time once resolves cleanly; a rambling one takes its earliest cue. */
 export function detectNarratedPhase(text: string | null | undefined): DayPhase | undefined {
+  return detectNarratedPhaseMatch(text)?.phase
+}
+
+/** `detectNarratedPhase` plus where in the text the cue sat — `deriveElapsedPhases` needs the index
+ *  to decide whether a day-skip cue or a phase cue came first. */
+export function detectNarratedPhaseMatch(
+  text: string | null | undefined,
+): { index: number; phase: DayPhase; cue: string } | undefined {
   if (!text?.trim()) return undefined
-  let earliest: { index: number; phase: DayPhase } | undefined
+  let earliest: { index: number; phase: DayPhase; cue: string } | undefined
   for (const { re, phase } of PHASE_CUES) {
     const m = text.match(re)
-    if (m?.index !== undefined && (!earliest || m.index < earliest.index)) earliest = { index: m.index, phase }
+    if (m?.index !== undefined && (!earliest || m.index < earliest.index)) {
+      earliest = { index: m.index, phase, cue: m[0].trim() }
+    }
   }
-  return earliest?.phase
+  return earliest
 }
+
+/**
+ * Time cues that skip whole days rather than moving the clock inside one ("the next morning",
+ * "tomorrow", "a week later"). Kept separate from `PHASE_CUES` because a day skip changes the date,
+ * not just the hour — ordered longest-first so "the day after tomorrow" can't read as "tomorrow".
+ */
+const DAY_SKIP_CUES: { re: RegExp; days: number; landOnPhase?: DayPhase }[] = [
+  { re: /\bthe day after tomorrow\b/i, days: 2 },
+  { re: /\b(?:a few|several|couple of) days later\b/i, days: 3 },
+  { re: /\b(?:a|the next|the following) week (?:later|after)\b/i, days: 7 },
+  { re: /\b(?:the )?(?:next|following) morning\b/i, days: 1, landOnPhase: 'morning' },
+  { re: /\b(?:the )?(?:next|following) day\b/i, days: 1, landOnPhase: 'morning' },
+  { re: /\btomorrow\b/i, days: 1 },
+]
+
+/** Cues that point at *today's* clock rather than ahead of it ("this morning", "today") — the only
+ *  ones that can legitimately name a phase the scene has already left. Every other cue ("that
+ *  night", "late at night", "at dawn") reads forward by nature, however far forward that is. */
+const SAME_DAY_CUE = /^(?:early |late |mid[- ]?)?this\b|^today\b/i
+
+/** A whole-day skip beyond a week reads as a scene change, not a clock step — clamp rather than let
+ *  one line of prose throw the calendar years forward. */
+export const MAX_DERIVED_DAYS = 7
+
+/**
+ * How much time a single turn's narration says passed. Two independent legs on purpose:
+ *  - `days`  — whole days an explicit skip cue named ("tomorrow", "a week later")
+ *  - `phases` — intra-day steps, only used when `days` is 0
+ * Never both, so "the next morning" can't be double-counted as a day skip *and* a phase walk.
+ */
+export interface ElapsedTime {
+  /** 0-3 phases to step forward inside the current day. */
+  phases: number
+  /** 0-7 whole days to skip. */
+  days: number
+  /** Phase to land on when skipping days; undefined keeps whatever phase the clock is already at. */
+  landOnPhase?: DayPhase
+  /** One readable clause saying why — surfaced to the player and asserted in tests. */
+  reason: string
+  /** The exact phrase that caused the move, when there was one. */
+  cue?: string
+}
+
+function earliestDaySkip(text: string): { index: number; days: number; landOnPhase?: DayPhase; cue: string } | undefined {
+  let best: { index: number; days: number; landOnPhase?: DayPhase; cue: string } | undefined
+  for (const { re, days, landOnPhase } of DAY_SKIP_CUES) {
+    const m = text.match(re)
+    if (m?.index === undefined) continue
+    if (!best || m.index < best.index) best = { index: m.index, days, landOnPhase, cue: m[0].trim() }
+  }
+  return best
+}
+
+function clampPhaseIndex(phaseIndex: number): number {
+  return Math.max(0, Math.min(PHASES.length - 1, phaseIndex))
+}
+
+/**
+ * Reads how far the world clock should move from one turn of narration, so a shared clock can keep
+ * up with a scene that says "the next morning" instead of sitting frozen until someone clicks a
+ * button. Deliberately conservative — the default answer is "no time passed":
+ *  - an explicit day-skip cue wins, and lands on the phase that cue names (else keeps the current one)
+ *  - otherwise a named time-of-day walks forward to it, 1-2 phases
+ *  - a cue naming the phase the clock is already at, or exactly one phase *back* ("this morning"
+ *    said in the afternoon), reads as a same-day reference and moves nothing: the per-chat
+ *    `scene.timePhase` override already grounds the prompt on it, and jumping the calendar forward
+ *    to reach it would claim time the scene never spent.
+ */
+export function deriveElapsedPhases(opts: { text?: string | null; day: number; phaseIndex: number }): ElapsedTime {
+  const text = opts.text ?? ''
+  if (!text.trim()) return { phases: 0, days: 0, reason: 'nothing narrated, so the clock stays put' }
+  const current = clampPhaseIndex(opts.phaseIndex)
+  const skip = earliestDaySkip(text)
+  const phaseCue = detectNarratedPhaseMatch(text)
+  // Earliest cue wins, matching `detectNarratedPhase`'s own rule.
+  if (skip && (!phaseCue || skip.index <= phaseCue.index)) {
+    const days = Math.min(MAX_DERIVED_DAYS, Math.max(1, skip.days))
+    const land = skip.landOnPhase ?? (phaseCue?.phase as DayPhase | undefined)
+    return {
+      phases: 0,
+      days,
+      landOnPhase: land,
+      cue: skip.cue,
+      reason:
+        days === 1
+          ? `"${skip.cue}" skips to the next day`
+          : `"${skip.cue}" skips ${days} days`,
+    }
+  }
+  if (!phaseCue) return { phases: 0, days: 0, reason: 'no time cue in the narration' }
+  const target = PHASES.indexOf(phaseCue.phase)
+  const delta = (target - current + PHASES.length) % PHASES.length
+  if (delta === 0) {
+    return { phases: 0, days: 0, cue: phaseCue.cue, reason: `"${phaseCue.cue}" names the phase the clock is already at` }
+  }
+  if (SAME_DAY_CUE.test(phaseCue.cue) && target < current) {
+    return { phases: 0, days: 0, cue: phaseCue.cue, reason: `"${phaseCue.cue}" reads as a same-day reference, not a skip` }
+  }
+  return {
+    phases: delta,
+    days: 0,
+    cue: phaseCue.cue,
+    reason: `"${phaseCue.cue}" moves the clock ${delta} phase${delta === 1 ? '' : 's'} forward`,
+  }
+}
+
+export interface AdvancedClock {
+  day: number
+  phaseIndex: number
+  /** True when the move crossed midnight (the date changed). */
+  slept: boolean
+  /** How many phases the clock actually stepped. */
+  phasesMoved: number
+  /** One readable clause explaining the move, for a toast or a log line. */
+  note: string
+}
+
+/**
+ * Applies an `ElapsedTime` to the clock: whole days first when the narration named them, otherwise a
+ * straight phase walk that rolls the date over whenever it passes night. Pure — the caller owns
+ * persisting the result, so this stays testable without a server.
+ */
+export function reasonedAdvance(day: number, phaseIndex: number, elapsed: ElapsedTime): AdvancedClock {
+  const start = clampPhaseIndex(phaseIndex)
+  if (elapsed.days > 0) {
+    const days = Math.min(MAX_DERIVED_DAYS, Math.max(0, Math.round(elapsed.days)))
+    const land = elapsed.landOnPhase ? PHASES.indexOf(elapsed.landOnPhase) : start
+    return {
+      day: day + days,
+      phaseIndex: clampPhaseIndex(land),
+      slept: true,
+      phasesMoved: ((land - start + PHASES.length) % PHASES.length) + days * PHASES.length,
+      note: `${elapsed.reason} — ${days} day${days === 1 ? '' : 's'} later, now ${PHASES[clampPhaseIndex(land)]}`,
+    }
+  }
+  const steps = Math.max(0, Math.min(MAX_DERIVED_PHASES, Math.round(elapsed.phases)))
+  let cursor = { day, phaseIndex: start }
+  for (let i = 0; i < steps; i++) cursor = advancePhase(cursor.day, cursor.phaseIndex)
+  const slept = cursor.day !== day
+  return {
+    ...cursor,
+    slept,
+    phasesMoved: steps,
+    note: steps === 0 ? elapsed.reason : `${elapsed.reason} — now ${PHASES[cursor.phaseIndex]}`,
+  }
+}
+
+/** Upper bound on a single turn's intra-day phase walk — a narration cue names one of four phases,
+ *  so three is the furthest it can legitimately land from where the clock already sits. */
+export const MAX_DERIVED_PHASES = PHASES.length - 1
 
 /** Case-insensitive, whitespace-tolerant "these name the same place" check — an exact match or
  *  either string containing the other ("Library" vs "School Library"). */

@@ -6,10 +6,12 @@
  * rides on the existing per-character `RelationshipTrack.realism` field, persisted with the chat.
  *
  * v1 scope: promise ledger, trust repair window, two-speed bond, mood intensity, fixations,
- * seven-need simulation, growth rings, chaos mode, recap. Dreams and auto time passage deferred.
+ * seven-need simulation, growth rings, chaos mode, recap. Dreams deferred; auto time passage lives
+ * in `world/calendar.ts` (`deriveElapsedPhases` / `reasonedAdvance`) since it owns the clock.
  */
 
 import type { RelationshipDimension } from '@/lib/types'
+import { PHASES, type DayPhase } from '@/lib/world/calendar'
 
 // --- types -------------------------------------------------------------------
 
@@ -447,6 +449,10 @@ export interface JournalEntry {
   /** -1..1 这件事对她的情绪色彩，用于心境一致性召回打分。 */
   valence: number
   createdAtReply: number
+  /** World-clock stamp the entry was written at, so a diary line can still be placed on the
+   *  calendar after the clock has moved on. Absent on entries written before this existed. */
+  atDay?: number
+  atPhase?: DayPhase
   lastRecallReply?: number
 }
 
@@ -469,9 +475,13 @@ export function addJournalFromTurn(
     replyIndex: number
     newFacts?: { text: string; importance?: number; valence?: number }[]
     affectionDelta: number
+    /** World clock at the moment this turn was written; stamped onto every entry so the diary can
+     *  be placed on the calendar even after the clock moves on. */
+    world?: { day: number; phaseIndex: number }
   },
 ): JournalEntry[] {
   const list = (entries ?? []).map((e) => ({ ...e }))
+  const stamp = turn.world ? { atDay: turn.world.day, atPhase: PHASES[turn.world.phaseIndex] } : {}
   for (const f of turn.newFacts ?? []) {
     const importance = f.importance ?? 0.5
     if (importance < 0.4) continue
@@ -483,13 +493,14 @@ export function addJournalFromTurn(
       flashbulb: importance >= 0.75,
       valence: f.valence ?? 0,
       createdAtReply: turn.replyIndex,
+      ...stamp,
     })
   }
   if (Math.abs(turn.affectionDelta) >= 2) {
     const valence = Math.sign(turn.affectionDelta)
     const text = valence > 0 ? "{{user}}做了让{{char}}心里一暖的事。" : "{{user}}做了让{{char}}心里不舒服的事。"
     const id = "j" + turn.replyIndex + "-" + Math.random().toString(36).slice(2, 8)
-    list.push({ id, text, heat: Math.min(1, 0.45 + Math.abs(turn.affectionDelta) * 0.15), flashbulb: Math.abs(turn.affectionDelta) >= 3, valence, createdAtReply: turn.replyIndex })
+    list.push({ id, text, heat: Math.min(1, 0.45 + Math.abs(turn.affectionDelta) * 0.15), flashbulb: Math.abs(turn.affectionDelta) >= 3, valence, createdAtReply: turn.replyIndex, ...stamp })
   }
   if (list.length > 24) {
     list.sort((a, b) => b.heat - a.heat)

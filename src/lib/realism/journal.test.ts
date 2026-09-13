@@ -92,3 +92,45 @@ describe('journal recall', () => {
     expect(line).toContain('她记忆里还热着的事')
   })
 })
+
+describe('journal world-clock stamps', () => {
+  it('stamps the world day and phase onto a fact-derived entry', () => {
+    const list = addJournalFromTurn([], {
+      replyIndex: 4,
+      newFacts: [{ text: '她记住了那家店的名字。', importance: 0.8, valence: 0.4 }],
+      affectionDelta: 0,
+      world: { day: 12, phaseIndex: 2 },
+    })
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({ atDay: 12, atPhase: 'evening', createdAtReply: 4 })
+  })
+
+  it('stamps the warmth-move entry too, so both entry kinds agree with the calendar', () => {
+    const list = addJournalFromTurn([], { replyIndex: 5, newFacts: [], affectionDelta: 2, world: { day: 3, phaseIndex: 3 } })
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({ atDay: 3, atPhase: 'night' })
+  })
+
+  it('stamps every entry in the list, not just the newest', () => {
+    const list = addJournalFromTurn(
+      [entry({ id: 'old', atDay: 1, atPhase: 'morning' })],
+      { replyIndex: 6, newFacts: [{ text: '新的记忆', importance: 0.9, valence: 0 }], affectionDelta: 0, world: { day: 2, phaseIndex: 0 } },
+    )
+    // The older entry keeps the day it was actually written on; only its heat cools.
+    expect(list.find((e) => e.id === 'old')).toMatchObject({ atDay: 1, atPhase: 'morning' })
+    expect(list.find((e) => e.atDay === 2)?.atPhase).toBe('morning')
+  })
+
+  it('leaves entries unstamped when no world clock is passed', () => {
+    const list = addJournalFromTurn([], { replyIndex: 7, newFacts: [{ text: '无钟记忆', importance: 0.9 }], affectionDelta: 0 })
+    expect(list[0].atDay).toBeUndefined()
+    expect(list[0].atPhase).toBeUndefined()
+  })
+
+  it('keeps the stamp across cooling so a diary line stays placeable on the calendar', () => {
+    const stamped = addJournalFromTurn([], { replyIndex: 1, newFacts: [{ text: '初遇', importance: 0.9 }], affectionDelta: 0, world: { day: 0, phaseIndex: 1 } })
+    const cooled = coolJournal(stamped)
+    expect(cooled[0]).toMatchObject({ atDay: 0, atPhase: 'afternoon' })
+    expect(cooled[0].heat).toBeLessThan(stamped[0].heat)
+  })
+})

@@ -64,6 +64,8 @@ export function SamplingControls() {
   const setSummaryDetail = useSettingsStore((s) => s.setSummaryDetail)
   const autoDetectTasks = useSettingsStore((s) => s.autoDetectTasks)
   const setAutoDetectTasks = useSettingsStore((s) => s.setAutoDetectTasks)
+  const autoAdvanceTime = useSettingsStore((s) => s.autoAdvanceTime)
+  const setAutoAdvanceTime = useSettingsStore((s) => s.setAutoAdvanceTime)
   const autoTrackRelationship = useSettingsStore((s) => s.autoTrackRelationship)
   const setAutoTrackRelationship = useSettingsStore((s) => s.setAutoTrackRelationship)
   const relationshipDifficulty = useSettingsStore((s) => s.relationshipDifficulty)
@@ -244,6 +246,18 @@ export function SamplingControls() {
           onChange={setAutoDetectTasks}
           label={t("Auto-detect completed tasks")}
           description="One model call after a reply, only while an objective is active, and conservative: it only ticks things off, never invents progress"
+        />
+      </Section>
+
+      <Section
+        title={t("World clock")}
+        description="A world's clock (day, season, weather, energy) advances by explicit action only. This also lets it follow what a scene narrates, so the calendar and the story don't drift apart."
+      >
+        <Toggle
+          checked={autoAdvanceTime}
+          onChange={setAutoAdvanceTime}
+          label={t("Auto-advance the clock from narration")}
+          description="Deterministic, no model call: a turn that says 'the next morning' moves the world on a day, 'later that evening' moves it a phase or two. A turn that names no time leaves the clock alone, and a same-day reference ('this morning', said in the afternoon) never claims time the scene didn't spend. Energy and diary stamps follow the clock."
         />
       </Section>
 

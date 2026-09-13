@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   ALL_HOLIDAYS,
   DAYS_PER_YEAR,
+  MAX_DERIVED_DAYS,
+  MAX_DERIVED_PHASES,
   activityPhase,
   advancePhase,
   daysUntilAnnualDate,
+  deriveElapsedPhases,
   describePresence,
   describeWeather,
   describeWorldMoment,
@@ -17,6 +20,7 @@ import {
   detectNarratedPhase,
   isNightPhase,
   PHASES,
+  reasonedAdvance,
   resolveScheduledPresence,
   spendEnergy,
   WEATHER_KINDS,
@@ -413,5 +417,121 @@ describe('ALL_HOLIDAYS', () => {
     for (const holiday of ALL_HOLIDAYS) {
       expect(getCalendarInfo(holiday.dayOfYear).holiday).toBe(holiday.name)
     }
+  })
+})
+
+describe('deriveElapsedPhases', () => {
+  it('moves nothing when the narration says nothing about time', () => {
+    const elapsed = deriveElapsedPhases({ text: 'She laughs and leans on the counter.', day: 2, phaseIndex: 1 })
+    expect(elapsed).toMatchObject({ phases: 0, days: 0 })
+    expect(elapsed.cue).toBeUndefined()
+  })
+
+  it('moves nothing on empty or missing text', () => {
+    expect(deriveElapsedPhases({ text: '', day: 0, phaseIndex: 0 })).toMatchObject({ phases: 0, days: 0 })
+    expect(deriveElapsedPhases({ text: null, day: 0, phaseIndex: 0 })).toMatchObject({ phases: 0, days: 0 })
+  })
+
+  it('walks forward to a named phase inside the day', () => {
+    // morning -> evening is two phases, same date.
+    expect(deriveElapsedPhases({ text: 'Later that evening, she knocks.', day: 3, phaseIndex: 0 })).toMatchObject({
+      phases: 2,
+      days: 0,
+      cue: 'Later that evening',
+    })
+  })
+
+  it('moves nothing when the cue names the phase the clock is already at', () => {
+    const elapsed = deriveElapsedPhases({ text: 'This morning she is quiet.', day: 3, phaseIndex: 0 })
+    expect(elapsed).toMatchObject({ phases: 0, days: 0 })
+    expect(elapsed.reason).toContain('already at')
+  })
+
+  it('treats a single phase back as a same-day reference, not a three-phase skip', () => {
+    // Afternoon, narration says "this morning" — a flashback, not a forward jump to tomorrow morning.
+    const elapsed = deriveElapsedPhases({ text: 'This morning she had seemed fine.', day: 3, phaseIndex: 1 })
+    expect(elapsed).toMatchObject({ phases: 0, days: 0 })
+    expect(elapsed.reason).toContain('same-day reference')
+  })
+
+  it('lands on night after a full day of walking (morning -> night, three phases, same date)', () => {
+    const elapsed = deriveElapsedPhases({ text: 'By late at night they are still talking.', day: 4, phaseIndex: 0 })
+    expect(elapsed).toMatchObject({ phases: 3, days: 0 })
+    expect(reasonedAdvance(4, 0, elapsed)).toMatchObject({ day: 4, phaseIndex: 3, slept: false })
+  })
+
+  it('rolls the date over when the walk passes night', () => {
+    // Night + "daybreak" is one phase forward, which is next morning — the date must change.
+    const elapsed = deriveElapsedPhases({ text: 'At dawn she finally texts back.', day: 6, phaseIndex: 3 })
+    expect(elapsed).toMatchObject({ phases: 1, days: 0 })
+    expect(reasonedAdvance(6, 3, elapsed)).toMatchObject({ day: 7, phaseIndex: 0, slept: true })
+  })
+
+  it('skips a whole day and lands on the phase the cue names', () => {
+    const elapsed = deriveElapsedPhases({ text: 'The next morning, the cafe is empty.', day: 8, phaseIndex: 3 })
+    expect(elapsed).toMatchObject({ phases: 0, days: 1, landOnPhase: 'morning' })
+    expect(reasonedAdvance(8, 3, elapsed)).toMatchObject({ day: 9, phaseIndex: 0, slept: true })
+  })
+
+  it('keeps the current phase when a day-skip cue names no time of day', () => {
+    const elapsed = deriveElapsedPhases({ text: 'Tomorrow, then.', day: 8, phaseIndex: 2 })
+    expect(elapsed).toMatchObject({ days: 1 })
+    expect(elapsed.landOnPhase).toBeUndefined()
+    expect(reasonedAdvance(8, 2, elapsed)).toMatchObject({ day: 9, phaseIndex: 2, slept: true })
+  })
+
+  it('counts multi-day skips, and clamps beyond a week', () => {
+    expect(deriveElapsedPhases({ text: 'A few days later, a letter arrives.', day: 1, phaseIndex: 0 }).days).toBe(3)
+    expect(deriveElapsedPhases({ text: 'The day after tomorrow we meet.', day: 1, phaseIndex: 0 }).days).toBe(2)
+    expect(deriveElapsedPhases({ text: 'A week later, everything had changed.', day: 1, phaseIndex: 0 }).days).toBe(
+      MAX_DERIVED_DAYS,
+    )
+  })
+
+  it('lets the earlier of a day-skip and a phase cue win', () => {
+    // Day skip comes first, so "this morning" (a flashback intro) does not override it.
+    const skipFirst = deriveElapsedPhases({ text: 'The next morning she calls. This morning had been awful.', day: 2, phaseIndex: 1 })
+    expect(skipFirst).toMatchObject({ days: 1, phases: 0 })
+    // Phase cue first: the narration has already moved to evening before it mentions tomorrow.
+    const phaseFirst = deriveElapsedPhases({ text: 'Later that evening she relaxes. Tomorrow she leaves.', day: 2, phaseIndex: 0 })
+    expect(phaseFirst).toMatchObject({ phases: 2, days: 0 })
+  })
+})
+
+describe('reasonedAdvance', () => {
+  it('is a no-op, with an explanation, when nothing elapsed', () => {
+    const advanced = reasonedAdvance(11, 2, { phases: 0, days: 0, reason: 'no time cue in the narration' })
+    expect(advanced).toMatchObject({ day: 11, phaseIndex: 2, slept: false, phasesMoved: 0 })
+    expect(advanced.note).toContain('no time cue')
+  })
+
+  it('never walks more than a full day of phases in one turn', () => {
+    const advanced = reasonedAdvance(0, 0, { phases: 99, days: 0, reason: 'greedy cue' })
+    expect(advanced.phasesMoved).toBe(MAX_DERIVED_PHASES)
+    expect(advanced).toMatchObject({ day: 0, phaseIndex: 3 })
+  })
+
+  it('keeps energy consistent with the phase it lands on', () => {
+    // Weekday morning: 3 actions. Walking to night must leave none.
+    const advanced = reasonedAdvance(2, 0, { phases: 3, days: 0, reason: 'late night' })
+    expect(getEnergyRemaining(advanced.day, advanced.phaseIndex)).toBe(0)
+    expect(getMaxEnergyForDay(advanced.day)).toBe(3)
+  })
+
+  it('recomputes weekday, season and holiday after a cross-season skip', () => {
+    // Day 111 is the last day of winter; +1 day wraps the 112-day year back to spring day 0.
+    const advanced = reasonedAdvance(111, 3, { phases: 0, days: 1, reason: 'tomorrow', landOnPhase: 'morning' })
+    expect(advanced.day).toBe(DAYS_PER_YEAR)
+    const info = getCalendarInfo(advanced.day)
+    expect(info.season).toBe('spring')
+    expect(info.day).toBe(0)
+    expect(info.weekday).toBe('monday')
+    expect(info.holiday).toBeUndefined()
+  })
+
+  it('lands on a holiday when the skip crosses one', () => {
+    // Spring's holiday sits on day-of-season 14, i.e. day 13.
+    const advanced = reasonedAdvance(11, 0, { phases: 0, days: 2, reason: 'a few days later', landOnPhase: 'morning' })
+    expect(getCalendarInfo(advanced.day).holiday).toBe('First Bloom')
   })
 })
