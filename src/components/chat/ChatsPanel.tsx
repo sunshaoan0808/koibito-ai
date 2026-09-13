@@ -25,7 +25,7 @@ export function ChatsPanel({
 }) {
   const unsortedChats = useApiQuery('chats', () => chatsApi.list(), []) ?? []
   // Section 9's chat-pinning gap: pinned chats float to the top regardless of `updatedAt`, same
-  // relative order otherwise (a stable sort 鈥?every modern JS engine's `Array.sort` guarantees
+  // relative order otherwise (a stable sort — every modern JS engine's `Array.sort` guarantees
   // this) so pinning something doesn't also silently reshuffle the rest of the list.
   const chats = [...unsortedChats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
   const characters = useApiQuery('characters', () => charactersApi.list(), []) ?? []
@@ -37,7 +37,7 @@ export function ChatsPanel({
   const setCollapsed = useSettingsStore((s) => s.setChatsPanelCollapsed)
   const client = useChatBackendClient()
 
-  // Section 14's "chat management basics" 鈥?rename, duplicate, one-click "new chat, same
+  // Section 14's "chat management basics" — rename, duplicate, one-click "new chat, same
   // character & persona," and delete, none of which had any UI before this. One row menu at a
   // time; renaming is inline (the row's title becomes the input, no separate dialog).
   const [menuForId, setMenuForId] = useState<string | null>(null)
@@ -48,7 +48,7 @@ export function ChatsPanel({
 
   const charFor = (id: string) => characters.find((c) => c.id === id)
 
-  // Only computable for a world-bound character that actually has a schedule authored 鈥?most
+  // Only computable for a world-bound character that actually has a schedule authored — most
   // characters have neither, and the chat row just shows no dot at all.
   const presenceFor = (character: Character | undefined) => {
     if (!character?.worldId || !character.schedule?.length) return undefined
@@ -61,7 +61,7 @@ export function ChatsPanel({
     setMenuForId(null)
     setRenamingId(chat.id)
     setRenameDraft(chat.title)
-    // The input doesn't exist yet on this same tick 鈥?focus once it's actually mounted.
+    // The input doesn't exist yet on this same tick — focus once it's actually mounted.
     requestAnimationFrame(() => renameInputRef.current?.select())
   }
 
@@ -79,7 +79,7 @@ export function ChatsPanel({
   const togglePin = async (chat: Chat) => {
     setMenuForId(null)
     try {
-      // Explicit true/false, never omitted 鈥?this is a plain boolean (unlike the nullable-clear
+      // Explicit true/false, never omitted — this is a plain boolean (unlike the nullable-clear
       // fields elsewhere in this file), so there's no JSON.stringify-drops-undefined risk here.
       await chatsApi.update(chat.id, { pinned: !chat.pinned })
     } catch (e) {
@@ -91,8 +91,8 @@ export function ChatsPanel({
     setMenuForId(null)
     setBusyId(chat.id)
     try {
-      // Forking with no cutoff message clones the entire chat 鈥?history, relationship state,
-      // events, facts 鈥?which is exactly what "duplicate" means here; a real independent copy,
+      // Forking with no cutoff message clones the entire chat — history, relationship state,
+      // events, facts — which is exactly what "duplicate" means here; a real independent copy,
       // not a fresh start. It lands linked via `parentChatId` the same as any other fork, which
       // doubles as a free "jump back to the original" affordance.
       const copy = await chatsApi.fork(chat.id)
@@ -132,7 +132,7 @@ export function ChatsPanel({
     setBusyId(chat.id)
     try {
       await chatsApi.remove(chat.id)
-      // Otherwise the app would keep pointing at a now-nonexistent chat id 鈥?ChatWindow falls
+      // Otherwise the app would keep pointing at a now-nonexistent chat id — ChatWindow falls
       // back to its empty state gracefully, but the sidebar would show nothing selected forever.
       if (activeChatId === chat.id) onSelect(null)
     } catch (e) {
@@ -143,7 +143,7 @@ export function ChatsPanel({
   }
 
   // The collapsed mini-rail exists to save desktop width while keeping some panel visible
-  // alongside a wide ChatWindow 鈥?a trade that doesn't make sense on a phone, where there's no
+  // alongside a wide ChatWindow — a trade that doesn't make sense on a phone, where there's no
   // width to spare in the first place. So below `md` it's always the full list, `collapsed` or
   // not; the two variants below just get responsive visibility instead of an early return.
   const newChatDialog = showNew && (
@@ -201,7 +201,7 @@ export function ChatsPanel({
         </div>
       </div>
       {fullChatList(true)}
-      {/* Mounted here, a sibling of both variants 鈥?not inside the `hidden md:flex` rail above,
+      {/* Mounted here, a sibling of both variants — not inside the `hidden md:flex` rail above,
           which is `display:none` on a phone and would take the dialog down with it. */}
       {newChatDialog}
       </>
@@ -283,7 +283,7 @@ export function ChatsPanel({
                     />
                   ) : (
                     <div className="flex items-center gap-1.5 truncate text-sm text-text">
-                      {/* Stays visible at rest, not hover-only 鈥?same reasoning as message-pinning's
+                      {/* Stays visible at rest, not hover-only — same reasoning as message-pinning's
                           own star: otherwise there'd be no way to spot a pinned chat while scrolling. */}
                       {chat.pinned && <Star size={12} strokeWidth={2} className="shrink-0 text-accent" fill="currentColor" />}
                       {chat.parentChatId && <GitFork size={12} strokeWidth={2} className="shrink-0 text-text-muted" />}
@@ -376,10 +376,10 @@ export function ChatsPanel({
         {t('Trash')}
         {trashCount > 0 && <span className="ml-auto text-[11px] tabular-nums">{trashCount}</span>}
       </button>
-      {/* In collapsed mode the fragment above renders this once as a sibling of both variants 鈥?          don't also mount it here in the `mobileOnly` copy. */}
+      {/* In collapsed mode the fragment above renders this once as a sibling of both variants —          don't also mount it here in the `mobileOnly` copy. */}
       {!mobileOnly && newChatDialog}
       {/* No separate outer-sibling copy the way `newChatDialog` has, so unlike that one this
-          renders straight from whichever `fullChatList` call is actually active 鈥?collapsed mode
+          renders straight from whichever `fullChatList` call is actually active — collapsed mode
           only ever mounts one of the two (see the branch above), never both at once. */}
       {showTrash && (
         <TrashPanel onClose={() => setShowTrash(false)} onRestored={(id) => { setShowTrash(false); onSelect(id) }} />

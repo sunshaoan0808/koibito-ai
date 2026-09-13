@@ -43,7 +43,7 @@ interface MessageBubbleProps {
   /** SFX-burst policy for this message's speaker (global toggle + their `sfxWords`). */
   sfx?: SfxConfig
   // Every callback below takes this message's own id as its first argument, rather than
-  // `MessageLog` pre-binding a fresh `() => onX(m.id)` closure per message per render 鈥?the whole
+  // `MessageLog` pre-binding a fresh `() => onX(m.id)` closure per message per render — the whole
   // point of wrapping this component in `memo` below is to skip re-rendering a bubble whose props
   // haven't really changed (most of them, on every token streamed into a DIFFERENT bubble); a
   // freshly-allocated closure prop would defeat that by never comparing equal across renders.
@@ -52,7 +52,7 @@ interface MessageBubbleProps {
   onDelete: (id: string) => void
   onRewind: (id: string) => void
   onRegenerate: (id: string) => void
-  /** Item 4's mid-scene correction: re-generates this reply with a one-shot, explicit correction folded in (`dating/steer.ts`) 鈥?never touches the chat, the card, or any persistent prompt section. */
+  /** Item 4's mid-scene correction: re-generates this reply with a one-shot, explicit correction folded in (`dating/steer.ts`) — never touches the chat, the card, or any persistent prompt section. */
   onSteer: (id: string, steerText: string) => void
   onSwipe: (id: string, dir: 'left' | 'right') => void
   onFork: (id: string) => void
@@ -87,7 +87,7 @@ export const MessageBubble = memo(function MessageBubble({
   const [speakingId, setSpeakingId] = useState<string | undefined>(() => speakingMessageId())
   const [draft, setDraft] = useState(message.text)
   // Item 4's steer popover: a one-shot correction typed here goes straight to `regenerateWithSteer`
-  // and is never persisted anywhere 鈥?closing/cancelling just discards it, same as never opening it.
+  // and is never persisted anywhere — closing/cancelling just discards it, same as never opening it.
   const [steering, setSteering] = useState(false)
   const [steerDraft, setSteerDraft] = useState('')
 
@@ -95,20 +95,20 @@ export const MessageBubble = memo(function MessageBubble({
   const displayText = isStreaming ? streamingText ?? '' : message.text
   const swipes = message.swipes ?? []
   const canSwipe = !isUser && swipes.length > 0 && !isStreaming
-  // Text stays empty on a failed generation 鈥?see `useChatSession.ts` 鈥?rather than persisting an
+  // Text stays empty on a failed generation — see `useChatSession.ts` — rather than persisting an
   // error string as the character's actual dialogue, which would otherwise get fed back into
   // every future prompt. The failure itself is shown here, driven by the flag, not by content.
   const showFailedIndicator = !isUser && message.failed && !isStreaming
-  // Item 8: durable alternative to a one-shot toast 鈥?see `types.ts`'s `boundaryFlag` doc comment.
+  // Item 8: durable alternative to a one-shot toast — see `types.ts`'s `boundaryFlag` doc comment.
   // Additive, not a replacement for the text (unlike the failed indicator above): the reply itself
   // is still real, just flagged for the player's own judgment call.
   const showBoundaryFlag = !isUser && !!message.boundaryFlag && !isStreaming
-  // Same durable, player-reviewed pattern as `boundaryFlag` above 鈥?see `dating/agencyGuard.ts`'s `detectPersonaAgencyViolation`.
+  // Same durable, player-reviewed pattern as `boundaryFlag` above — see `dating/agencyGuard.ts`'s `detectPersonaAgencyViolation`.
   const showPovFlag = !isUser && !!message.povFlag && !isStreaming
-  // Item 11: same durable, player-reviewed pattern again 鈥?see `types.ts`'s `explicitQualityFlag`
+  // Item 11: same durable, player-reviewed pattern again — see `types.ts`'s `explicitQualityFlag`
   // doc comment and `dating/intimacyScene.ts`'s `detectExplicitAntiPatternUsed`.
   const showExplicitQualityFlag = !isUser && !!message.explicitQualityFlag && !isStreaming
-  // Same durable pattern once more, for a reply that contradicted the tracked scene state 鈥?see
+  // Same durable pattern once more, for a reply that contradicted the tracked scene state — see
   // `dating/continuityGuard.ts`. This one has usually already earned an automatic retry; the badge
   // is what's left when the retry was spent or the second attempt broke continuity too.
   const showContinuityFlag = !isUser && !!message.continuityFlag && !isStreaming
@@ -132,7 +132,7 @@ export const MessageBubble = memo(function MessageBubble({
     closeSteer()
     if (trimmed) onSteer(message.id, trimmed)
   }
-  // A small inline popover anchored to the Steer button itself 鈥?same click-outside-backdrop
+  // A small inline popover anchored to the Steer button itself — same click-outside-backdrop
   // technique `ChatsPanel.tsx`'s row menu uses, kept local here rather than a full `Modal` since
   // this is a single short-lived textarea, not a standalone screen.
   const steerControl = (
@@ -326,7 +326,7 @@ export const MessageBubble = memo(function MessageBubble({
       )}
     </div>
   )
-  // Meta (timestamp, regenerate/delete, swipe) only appears on hover 鈥?keeps the resting
+  // Meta (timestamp, regenerate/delete, swipe) only appears on hover — keeps the resting
   // conversation calm and free of per-line chrome, matching the reference screens. Forced visible
   // while the steer popover is open: it's a child of this row, and CSS opacity is inherited by
   // descendants regardless of position, so it would otherwise vanish (while still interactive) the
@@ -334,14 +334,14 @@ export const MessageBubble = memo(function MessageBubble({
   const metaHoverable = (
     <div className={`mt-1 h-6 transition-opacity ${steering ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>{meta}</div>
   )
-  // Unlike the rest of `meta`, a pin needs to stay visible at rest 鈥?otherwise there's no way to
+  // Unlike the rest of `meta`, a pin needs to stay visible at rest — otherwise there's no way to
   // spot favorited moments while scrolling without hovering every single bubble.
   const pinBadge = message.pinned ? (
     <span className="inline-flex text-accent" title="Pinned">
       <Star size={12} strokeWidth={2} fill="currentColor" />
     </span>
   ) : null
-  // Item 8: same "stays visible at rest" reasoning as the pin badge above 鈥?a toast at generation
+  // Item 8: same "stays visible at rest" reasoning as the pin badge above — a toast at generation
   // time is easy to miss; this stays on the message for as long as the flag stands, so it's still
   // there whenever the player actually looks. See `types.ts`'s `boundaryFlag` doc comment.
   const boundaryBadge = showBoundaryFlag ? (
@@ -360,7 +360,7 @@ export const MessageBubble = memo(function MessageBubble({
       <AlertCircle size={12} strokeWidth={2} />
     </span>
   ) : null
-  // A third, distinct icon again 鈥?this one a prose-quality miss (the model actually used a phrase
+  // A third, distinct icon again — this one a prose-quality miss (the model actually used a phrase
   // it was told to avoid), not a boundary or POV violation, so it reads as its own category too.
   const explicitQualityBadge = showExplicitQualityFlag ? (
     <span
@@ -370,14 +370,14 @@ export const MessageBubble = memo(function MessageBubble({
       <MessageSquareWarning size={12} strokeWidth={2} />
     </span>
   ) : null
-  // A fourth distinct icon 鈥?a break in what the scene already established, rather than a limit, a
+  // A fourth distinct icon — a break in what the scene already established, rather than a limit, a
   // POV slip, or a prose tell.
   const continuityBadge = showContinuityFlag ? (
     <span className="inline-flex text-warning" title={`This reply contradicted the scene: ${message.continuityFlag}. Worth a regenerate if it reads wrong.`}>
       <Unlink size={12} strokeWidth={2} />
     </span>
   ) : null
-  // 10b: how the player tagged this line's intent. Shown at rest (not hover-only) 鈥?it's real
+  // 10b: how the player tagged this line's intent. Shown at rest (not hover-only) — it's real
   // context for how the exchange should read.
   const intentBadge = (() => {
     const spec = intentSpec(message.intent)
@@ -389,7 +389,7 @@ export const MessageBubble = memo(function MessageBubble({
     )
   })()
   // The user's own direct question: once sent, a line drafted from the Relationship panel's
-  // Unlocks tab (a kiss spot/position/toy/activity) reads exactly like ordinary freeform text 鈥?  // nothing marked which catalog entry it came from, so a player scrolling back later (or who just
+  // Unlocks tab (a kiss spot/position/toy/activity) reads exactly like ordinary freeform text —  // nothing marked which catalog entry it came from, so a player scrolling back later (or who just
   // forgot) had no way to tell. Same "stays visible at rest" reasoning as `intentBadge` above, not
   // hover-only, since this is exactly the kind of thing a player wants to spot while skimming, not
   // hunt for.
@@ -466,7 +466,7 @@ export const MessageBubble = memo(function MessageBubble({
     )
   }
 
-  // flat (default): log-like, full width, no dividers 鈥?just generous vertical rhythm
+  // flat (default): log-like, full width, no dividers — just generous vertical rhythm
   return (
     <div id={anchorId} className={`group flex gap-3 rounded-lg py-3.5 transition-colors duration-1000 ${highlightClass}`}>
       <Avatar name={message.name} shape={avatarShape} dataUrl={avatarDataUrl} />

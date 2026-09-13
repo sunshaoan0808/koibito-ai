@@ -318,9 +318,9 @@ export const CHAOS_EVENTS: ChaosEvent[] = [
   { text: '书店老板认出{{char}}是常客，送了她一本一直想要的绝版书。', flavor: 'fortune' },
   { text: '天边突然放晴，一整道彩虹横在两人面前。', flavor: 'fortune' },
   { text: '公交车正好在两人到站的瞬间进站，司机示意慢点不着急。', flavor: 'fortune' },
-  { text: '{{char}} accidentally 那家一直排队的老店今天居然没人排队。', flavor: 'fortune' },
+  { text: '{{char}}发现那家一直排队的老店今天居然没人排队。', flavor: 'fortune' },
   { text: '门口的流浪猫主动蹭上{{char}}的裤腿，跟着走了一路。', flavor: 'fortune' },
-  { text: '{{char}}随手买的刮刮乐刮出了一个 minimum 奖，小钱但高兴。', flavor: 'fortune' },
+  { text: '{{char}}随手买的刮刮乐刮出了一个小奖，小钱但高兴。', flavor: 'fortune' },
   // 🔴 厄运
   { text: '{{char}}的鞋跟断了，走路一瘸一拐，脸上挂不住。', flavor: 'misfortune' },
   { text: '一杯饮料整个泼在{{char}}的包上，里面的书湿了一角。', flavor: 'misfortune' },
@@ -521,7 +521,7 @@ export function journalGuidance(entries: JournalEntry[] | undefined, replyIndex:
   const recalled = recallJournal(entries, { replyIndex, max: 5 })
   if (!recalled.length) return ''
   const lines = recalled.map((e) => {
-    const tone = e.valence < -0.3 ? '（想起时仍有点刺）' : e.valence > 0.3 ? '（想起时会 soft 一瞬）' : ''
+    const tone = e.valence < -0.3 ? '（想起时仍有点刺）' : e.valence > 0.3 ? '（想起时会柔软一瞬）' : ''
     return '- ' + e.text + tone
   }).join("\n")
   return '她记忆里还热着的事（可自然提及或影响语气，不要逐条复述）：\n' + lines

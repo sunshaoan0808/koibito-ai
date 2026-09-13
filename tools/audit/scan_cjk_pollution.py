@@ -12,7 +12,7 @@
 抑制误报的三条规则：
     1) 含乱码的行只报 MOJIBAKE，不再做英文残渣分析（乱码会把英文注释误判成中文行）
     2) 模板宏 {{char}} / {name} / ${x} 先剥掉再分析
-    3) 紧邻 = / _ . # @ : \ - 的英文视为代码片段（kind=gift、/models、use_chat）
+    3) 紧邻符号（等号/下划线/点/井号/@/冒号/反斜杠/连字符）的英文视为代码片段（kind=gift、/models、use_chat）
 """
 import re
 import sys

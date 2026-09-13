@@ -3,8 +3,7 @@
  *
  * - `authGuard`: passcode session auth. `POST /api/auth/login` with `{ passcode }` sets an HttpOnly
  *   session cookie; everything under `/api` (except the login route) and `/avatars` requires it.
- *   Sessions live in memory — restarting the server logs everyone out, which is the right call for
- *   a personal deployment.
+ *   Sessions are deterministic HMAC tokens (restart-safe, no in-memory store).
  * - `llmProxy`: forwards `/api/llm/<path>` to the upstream OpenAI-compatible gateway configured in
  *   `data/config.json` (or env), injecting the API key server-side so it never lives in a browser.
  *   Streaming (SSE) is passed through untouched.
