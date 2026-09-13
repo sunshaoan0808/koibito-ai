@@ -1,3 +1,4 @@
+import { blankCharacterData } from '@/lib/characters/cardSpec'
 import type { CastCandidate } from './detector'
 
 /**
@@ -12,14 +13,13 @@ import type { CastCandidate } from './detector'
 export function candidateToCharacterInput(candidate: CastCandidate): Record<string, unknown> {
   const sample = candidate.sample.trim()
   return {
+    // Spread the repo's own blank card rather than writing a partial literal: a hand-rolled card
+    // silently drops every field it forgets (the trap `saveCharacter.ts` calls out), and the
+    // payload here is untyped enough that nothing would fail loudly.
     card: {
-      name: candidate.name,
+      ...blankCharacterData(candidate.name),
       // The line the guest actually appeared in, `Came from the scene` rather than an invented bio.
       description: sample || candidate.name,
-      personality: '',
-      scenario: '',
-      first_mes: '',
-      mes_example: '',
       creator: 'Dynamic cast',
       character_version: '1.0',
       tags: ['dynamic-cast'],

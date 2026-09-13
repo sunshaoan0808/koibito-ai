@@ -25,6 +25,15 @@ describe('candidateToCharacterInput', () => {
     expect(extensions.first_seen).toBe('m2')
     expect(extensions.mentions).toBe(3)
   })
+
+  it('carries the whole card spec, not just the fields it overwrites', () => {
+    const input = candidateToCharacterInput(candidate) as { card: Record<string, unknown> }
+    // The blank card is spread, so fields the promotion does not touch survive.
+    expect(input.card.alternate_greetings).toEqual([])
+    expect(input.card.creator_notes).toBe('')
+    expect(input.card.system_prompt).toBe('')
+    expect(input.card.post_history_instructions).toBe('')
+  })
 })
 
 describe('withPromotedParticipant', () => {
