@@ -1,5 +1,11 @@
 # RP Suite
 
+> **本仓库（koibito-ai）说明**
+> 本项目基于上游 [pnotisdev/rp](https://github.com/pnotisdev/rp)（MIT，Copyright (c) 2026 pnotisdev）二次开发，上游的 `LICENSE` 与署名均已保留。
+> 相对上游的主要改造：**中文本地化**（i18n 词典 + 全中文系统提示词 + 角色卡汉化）、**口令鉴权 + 服务端 LLM 代理**（key 不出服务端）、**PWA**（可装到手机桌面）、**真实感关系引擎 realism**（承诺账本 / 信任修复 / 双层羁绊 / 情绪强度 / 心结 / 七需求 / 成长年轮 / Chaos / 日记）。
+> 改造细节与吸收进度见 [docs/ABSORPTION-PLAN.md](docs/ABSORPTION-PLAN.md)。
+> 下方英文文档为上游原生文档，安装、玩法与模型接入说明同样适用。
+
 A roleplay client that runs entirely on your own machine, built around a dating sim rather than bolted onto one.
 
 <p align="center">
@@ -19,8 +25,8 @@ Characters, chats, worlds and personas live in a SQLite file under `data/`, alon
 You need [Node 22.5+](https://nodejs.org/) (24 is what this is developed against; `node:sqlite` requires at least 22.5) and something to generate text with. A local [KoboldCpp](https://github.com/LostRuins/koboldcpp) is the usual answer, but an API key works too.
 
 ```bash
-git clone https://github.com/pnotisdev/rp.git
-cd rp
+git clone https://github.com/sunshaoan0808/koibito-ai.git
+cd koibito-ai
 npm install
 npm run dev
 ```
