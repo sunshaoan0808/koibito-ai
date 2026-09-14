@@ -1,6 +1,7 @@
 # 设计稿 · 知识迷雾（Knowledge Fog）
 
-> 状态：**设计稿（未实现）**。自研项，原项目 front-porch-AI 无此机制（实测全仓无知识状态模型）。
+> 状态：**一期已落地**（`src/lib/knowledge/claims.ts` ＋ `claims.test.ts`，9 用例）；二期（接提示词装配）与三期（编辑器维度＋去重协同）未做。
+> 自研项，原项目 front-porch-AI 无此机制（实测全仓无知识状态模型）。
 > 落笔依据：本仓现码实测（行号见下）。
 
 ## 一、问题
@@ -54,7 +55,7 @@ export interface KnowledgeClaim {
 ### 3.2 可见性判定（纯函数，全部可断言）
 
 ```ts
-export interface VisibilityContext {
+export interface VisibilityContext {  // 一期实现里收成了 `characterId: string`，见下方偏离说明
   characterId: string
   /** 该角色此刻参与的聊天（含其参与者列表）。 */
   chatId?: string
@@ -69,6 +70,11 @@ export function claimVisibleTo(claim: KnowledgeClaim, ctx: VisibilityContext): b
 /** 只喂该角色可见的——接在既有 facts 链路后面，不替换它。 */
 export function visibleClaims(claims: KnowledgeClaim[], ctx: VisibilityContext): KnowledgeClaim[]
 ```
+
+> 实现偏离（一期落刀时定的）：**判定签名从 `(claim, ctx)` 收成 `(claim, characterId)`**。ctx 里的
+> 社交图与参与者列表在"可见性判定"里用不到——判定只吃 claim 自带的 `witnessedByIds`/`toldIds`
+> 与该角色 id；图的边属于**传播**（`toldTargets(claim, characters)`）。把两者塞进同一个上下文，
+> 正是"同场即全知"从后门溜回来的方式。
 
 **传播规则（一期只做两跳）**
 1. **见证**：在场参与者 → `witnessedByIds`。

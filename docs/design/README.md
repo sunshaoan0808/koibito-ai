@@ -4,9 +4,11 @@ P4 §12 里 **原项目 front-porch-AI 没有先例**的三项——按用户口
 
 | 稿 | 解决什么 | 状态 |
 |---|---|---|
-| [`town-feed.md`](./town-feed.md) | 世界在玩家不在场时也会发生事，沉淀成可读的"镇上消息" | 设计稿（未实现） |
-| [`knowledge-fog.md`](./knowledge-fog.md) | 角色不再全知：一件事只有见证者确知，其余经"告知"通路 | 设计稿（未实现） |
+| [`town-feed.md`](./town-feed.md) | 世界在玩家不在场时也会发生事，沉淀成可读的"镇上消息" | **一期已落地**：`src/lib/world/townFeed.ts`（10 用例） |
+| [`knowledge-fog.md`](./knowledge-fog.md) | 角色不再全知：一件事只有见证者确知，其余经"告知"通路 | **一期已落地**：`src/lib/knowledge/claims.ts`（9 用例） |
 | [`plugin-api.md`](./plugin-api.md) | 不改主仓即可扩提示词 section / `/命令` / 视图 | 设计稿（未实现） |
+
+一期的共同边界：**纯函数 + 断言**——不碰 UI、不碰持久化、不接提示词、不调 LLM。二三期各自在稿子的「分期与验收」里。
 
 ## 三份稿共同的实测前提
 

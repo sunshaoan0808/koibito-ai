@@ -1,6 +1,7 @@
 # 设计稿 · 城镇信息流（Town Feed）
 
-> 状态：**设计稿（未实现）**。自研项，原项目 front-porch-AI 无此机制（全仓实测 `fogOf`/`knowledgeState`/`saveSlot` 0 命中，最近似的 Stoop 是角色卡社区仓库，非信息流，且本仓已列"不推荐吸收"）。
+> 状态：**一期已落地**（`src/lib/world/townFeed.ts` ＋ `townFeed.test.ts`，10 用例）；二期（UI＋持久化）与三期（接知识迷雾）未做。
+> 自研项，原项目 front-porch-AI 无此机制（全仓实测 `fogOf`/`knowledgeState`/`saveSlot` 0 命中，最近似的 Stoop 是角色卡社区仓库，非信息流，且本仓已列"不推荐吸收"）。
 > 落笔依据：本仓现码实测（行号见下），非推测。
 
 ## 一、问题
@@ -62,14 +63,15 @@ export interface TownFeedInput {
   /** 玩家不在此处的时段：从上次结算到现在的世界时钟区间。 */
   from: { day: number; phaseIndex: number }
   to: { day: number; phaseIndex: number }
-  characters: CharacterLike[]      // 复用 ambientEvents 的 SocialConnectionLike 形态
-  weatherByDay: WeatherLike[]      // `calendar.ts` 的产出口
-  schedules: ScheduleLike[]        // `workSchedule.ts` 的产出口
+  characters: FeedCharacterLike[]  // id/name ＋ 班表（`calendar.ts` 的 ScheduleEntry）＋ 社交边（`ambientEvents.ts` 的 SocialConnectionLike）
+  maxEntries?: number              // 硬上限，超限保最新
 }
 
 /** 确定性：同输入同输出（时间区间内逐日逐阶段推进，每格至多一条）。 */
 export function generateTownFeed(input: TownFeedInput): FeedEntry[]
 ```
+
+> 实现偏离（一期落刀时定的，比稿子少一层）：**天气不由调用方注入**。实测 `getPhaseWeather(worldId, day, phaseIndex)`（`calendar.ts:137`）本身就是纯确定性函数，注入等于多包一层；同理 `pickFrom`/`seededFraction`（`calendar.ts:96/106`）已是本仓既有的确定性原语，不另造随机层。
 
 **抽取纪律（沿用既有原语，不另造）**
 - `social`：对每个有边的 NPC 对，调 `selectSocialReaction`（`ambientEvents.ts:186`）影子求值——**影子 = 不推进当前聊天状态**，只取反应文本。
