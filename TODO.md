@@ -471,6 +471,11 @@ play."
       `bg-bg/95` panel. `src/components/chat/VNStage.tsx` (`showLog` block), `MessageLog.tsx`.
 - [ ] Expression-set generation from one reference image already exists (#125) — surface it more
       prominently in the empty VN state, alongside `vnArtHint`.
+      **落刀点（2026-09-14 侦察核定）**：① `src/lib/vn/artHint.ts:27` 的 `vnArtHint()` 是**纯函数** →
+      加"有立绘但无表情组"的提示分支（规则见 `src/lib/characters/portraitRun.ts` ✓，
+      既有守护用例 `src/lib/vn/vnArtHintWorldLink.test.ts` ✓）；② 空状态渲染处接
+      `src/components/characters/GenerateExpressionSetDialog.tsx`（#125 的 UI 入口 ✓）的打开按钮 ＋ zh/en 词条 ✓。
+      **先落 ①（纯函数 + 用例，可独立提交 ✓）再接 ②** ✓ —— 与 ④/epub 同一成功模式 ✓。
 - [ ] Gallery: a "music room" tab listing a world's uploaded BGM tracks (Ren'Py convention) — the
       tracks already exist per-world. `src/components/gallery/GalleryView.tsx`.
 
