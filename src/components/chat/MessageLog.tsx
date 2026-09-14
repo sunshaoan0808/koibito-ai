@@ -82,7 +82,13 @@ export function MessageLog({
                 }),
               )
             : undefined
-          return [m.id, { avatarDataUrl, sfx, tint }]
+          // Same speaker resolution the fields above already use: `assets` rides the per-speaker
+          // derivation, so MessageBubble needs no new prop chain.
+          const assets =
+            m.role !== 'char'
+              ? undefined
+              : (!m.speakerId ? character : participantCharacters.find((c) => c.id === m.speakerId) ?? character)?.assets
+          return [m.id, { avatarDataUrl, sfx, tint, assets }]
         }),
       ),
     [messages, persona, character, participantCharacters, sfxEnabled, globalSfxWords, tintSpeakers],
@@ -96,6 +102,7 @@ export function MessageLog({
           message={m}
           avatarDataUrl={perMessage.get(m.id)?.avatarDataUrl}
           sfx={perMessage.get(m.id)?.sfx}
+          assets={perMessage.get(m.id)?.assets}
           tint={perMessage.get(m.id)?.tint}
           isStreaming={generatingMessageId === m.id}
           // Only the bubble actually streaming needs the live text — handing every other bubble

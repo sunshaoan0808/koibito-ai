@@ -42,6 +42,8 @@ interface MessageBubbleProps {
   isHighlighted?: boolean
   /** SFX-burst policy for this message's speaker (global toggle + their `sfxWords`). */
   sfx?: SfxConfig
+  /** Speaker's image assets for `{{image::name}}` embeds, derived from the same speaker as `sfx`. */
+  assets?: Record<string, string>
   /**
    * Speaker-stripe colour for the VN backlog's translucent log (`text/speakerTint`). Undefined in
    * the classic transcript, which keeps its own look — this is additive, not a restyle.
@@ -71,6 +73,7 @@ export const MessageBubble = memo(function MessageBubble({
   streamingText,
   isHighlighted,
   sfx,
+  assets,
   tint,
   onEdit,
   onDelete,
@@ -227,7 +230,7 @@ export const MessageBubble = memo(function MessageBubble({
           {t('Generation failed. Try regenerating below.')}
         </span>
       ) : (
-        renderMessageText(displayText, regexScripts, sfx)
+        renderMessageText(displayText, regexScripts, sfx, assets)
       )}
       {isStreaming && <span className="cursor-blink font-mono">▋</span>}
     </div>
@@ -429,7 +432,7 @@ export const MessageBubble = memo(function MessageBubble({
                   {t('Generation failed. Try regenerating below.')}
                 </span>
               ) : (
-                renderMessageText(displayText, regexScripts, sfx)
+                renderMessageText(displayText, regexScripts, sfx, assets)
               )}
               {isStreaming && <span className="cursor-blink font-mono">▋</span>}
             </>
