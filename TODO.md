@@ -324,7 +324,7 @@ play."
       windows and a missed-window concept, plus a firmer unread treatment (badge → a proper
       notification card in the chat list). `src/lib/dating/outreach.ts`,
       `src/lib/hooks/useOutreachTick.ts`, `ChatsPanel.tsx`.
-- [ ] **Relationship journal / confidant page** (Persona confidant screen). A per-character page:
+- [x] **Relationship journal / confidant page** (Persona confidant screen). A per-character page:
       what you've learned about them (likes/goals discovered), milestones hit, memories pinned,
       next unlock and what it needs. `RelationshipPanel` is close but reads as a transactional
       control panel, not a keepsake. `src/components/chat/RelationshipPanel.tsx`.

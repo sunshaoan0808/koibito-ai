@@ -20,7 +20,9 @@ import {
   X,
   Flame,
   type LucideIcon,
+  BookOpen,
 } from 'lucide-react'
+import { RelationshipJournal } from '@/components/chat/RelationshipJournal'
 import type { Character, GalleryEntry } from '@/lib/characters/cardSpec'
 import type { Chat, WorldCard } from '@/lib/types'
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
@@ -123,7 +125,7 @@ const INTIMACY_CATEGORIES: { id: IntimacyCategory; label: string }[] = [
   { id: 'activity', label: 'Activities' },
 ]
 
-type PanelTab = 'overview' | 'unlocks' | 'shop' | 'more'
+type PanelTab = 'overview' | 'unlocks' | 'shop' | 'more' | 'journal'
 
 interface RelationshipPanelProps {
   chat: Chat
@@ -361,6 +363,7 @@ export function RelationshipPanel({
       badge: intimacyUnlocked.length ? <RailCount>{intimacyUnlocked.length}</RailCount> : undefined,
     },
     ...(hasShop ? [{ id: 'shop' as const, label: 'Shop', icon: ShoppingBag }] : []),
+    { id: 'journal', label: 'Journal', icon: BookOpen },
     { id: 'more', label: 'More', icon: Settings2 },
   ]
   // Falls back off the shop tab if it stops applying (re-derived from the catalogs every render).
@@ -1006,6 +1009,8 @@ export function RelationshipPanel({
           </div>
         </div>
       )}
+
+      {activeTab === 'journal' && <RelationshipJournal chatId={chat.id} />}
 
       {activeTab === 'more' && (
         <div className="space-y-3">
