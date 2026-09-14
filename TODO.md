@@ -392,8 +392,13 @@ play."
 - [x] **Flip the Connection tab** — shipped. "Chat generation backend" (the provider picker + any
       hosted config) is now first; "KoboldCpp connection" follows, with copy updated to match the
       new order. Both still always visible. `src/components/settings/ConnectionSettings.tsx`.
-- [ ] **Settings search** — a filter box that hides `Section`s not matching a keyword (every
-      `Section` already has a title + description string), or index setting names in Cmd-K.
+- [x] **Settings search** — a filter box that hides `Section`s not matching a keyword (every
+      `Section` already has a title + description string), ~~or index setting names in Cmd-K~~.
+      ✅ 2026-09-14（选了过滤框这条）：纯匹配器 `src/lib/settings/sectionFilter.ts`，上下文
+      `src/lib/settings/settingsFilterContext.ts`（默认 `''` = 关，故 modal/插件里的 `Section` 不受影响），
+      搜索框放进 `SettingsView.tsx` 的 sticky 区，`Section` 自身作唯一收口点。浏览器实测（生成 tab
+      16 卡）：`记忆`→1、`生成`→1、`quick replies`→1、`关系 追踪`→1、空→16、清除按钮→16。
+      注意：匹配的是**渲染后的文本**，所以中文界面下英文关键词不匹配已翻译的卡片标题（符合直觉）。
 - [ ] **Shared `<InheritableField>`** — a wrapper showing "inherited from World · override" for the
       values that cascade (intimacy: global/world; instruct template: global/character; VN + assists:
       global/world-template/chat) instead of explaining precedence only in hint prose.

@@ -386,4 +386,10 @@ export const ZH: Record<string, string> = {
   'Restoring…': '正在恢复…',
   'Restore from backup…': '从备份恢复…',
   "Search characters…": "搜索角色…",
+
+  // Settings search — the filter box that hides Sections whose title/description don't match
+  'Filter settings…': '筛选设置…',
+  'Filter settings': '筛选设置',
+  'Clear filter': '清除筛选',
+  'Showing only cards matching “{q}”': '仅显示匹配「{q}」的卡片',
 }

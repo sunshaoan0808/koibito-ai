@@ -1,5 +1,7 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { matchesSectionFilter } from '@/lib/settings/sectionFilter'
+import { useSettingsFilter } from '@/lib/settings/settingsFilterContext'
 
 type SectionSurface = 'elevated' | 'sunken' | 'bare'
 
@@ -34,6 +36,15 @@ export function Section({
   contentClassName = '',
   children,
 }: SectionProps) {
+  // Settings search hides cards that don't match, and this is its single choke point — so the filter
+  // never needs to know which tab a card lives on. The context defaults to '', which is why Sections
+  // in modals and plugin panels (no search box) keep rendering untouched. `description` is a
+  // ReactNode; only the plain-string form is searched, since matching rendered markup would be guessing.
+  const query = useSettingsFilter()
+  if (!matchesSectionFilter(title, typeof description === 'string' ? description : '', query)) {
+    return null
+  }
+
   return (
     <section className={className}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">

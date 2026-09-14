@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { Search, X } from 'lucide-react'
 import { t, getLocale, setLocale, LANGUAGES, LOCALES, type LocaleId } from '@/lib/i18n'
+import { isFilterActive } from '@/lib/settings/sectionFilter'
+import { SettingsFilterContext } from '@/lib/settings/settingsFilterContext'
 import { ConnectionSettings } from './ConnectionSettings'
 import { ThemeEditor } from './ThemeEditor'
 import { SamplingControls } from './SamplingControls'
@@ -11,6 +14,7 @@ type Tab = 'connection' | 'appearance' | 'generation' | 'voice' | 'images' | 'da
 
 export function SettingsView() {
   const [tab, setTab] = useState<Tab>('connection')
+  const [filter, setFilter] = useState('')
 
   const TABS: [Tab, string][] = [
     ['connection', t('Connection')],
@@ -73,14 +77,51 @@ export function SettingsView() {
             </button>
           ))}
         </div>
+        {/* The filter sits inside the sticky block so it stays reachable from the bottom of a long
+            tab — which is the whole point, since Generation alone is ~17 cards. */}
+        <div className="pt-3">
+          <div className="relative">
+            <Search
+              size={14}
+              strokeWidth={2}
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+            />
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder={t('Filter settings…')}
+              aria-label={t('Filter settings')}
+              className="w-full rounded-xl bg-bg-sunken py-2 pl-9 pr-9 text-sm text-text outline-none ring-1 ring-transparent placeholder:text-text-muted focus:ring-accent/40"
+            />
+            {isFilterActive(filter) && (
+              <button
+                type="button"
+                onClick={() => setFilter('')}
+                title={t('Clear filter')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-text-muted transition-colors hover:text-text"
+              >
+                <X size={14} strokeWidth={2} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
       <div className="pt-6">
-        {tab === 'connection' && <ConnectionSettings />}
-        {tab === 'appearance' && <ThemeEditor />}
-        {tab === 'generation' && <SamplingControls />}
-        {tab === 'voice' && <VoiceSettings />}
-        {tab === 'images' && <ImageGenSettings />}
-        {tab === 'data' && <DataSettings />}
+        {isFilterActive(filter) && (
+          <p className="mb-4 text-xs text-text-muted">
+            {t('Showing only cards matching “{q}”', { q: filter.trim() })}
+          </p>
+        )}
+        {/* The provider wraps the tab bodies, so every `Section` below filters — no card has to know
+            a search box exists, and Sections outside Settings never see a query at all. */}
+        <SettingsFilterContext.Provider value={filter}>
+          {tab === 'connection' && <ConnectionSettings />}
+          {tab === 'appearance' && <ThemeEditor />}
+          {tab === 'generation' && <SamplingControls />}
+          {tab === 'voice' && <VoiceSettings />}
+          {tab === 'images' && <ImageGenSettings />}
+          {tab === 'data' && <DataSettings />}
+        </SettingsFilterContext.Provider>
       </div>
     </div>
   )
