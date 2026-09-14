@@ -487,6 +487,14 @@ play."
       `portrait of ${name}, ${description}` ✓）；耦合只在两个回调 —— 编辑器写**未保存表单态** ✗，
       **VN 侧改写角色 store** ✓。→ **直接从 VNStage 挂载即可，不必抽共用包装** ✓（两处宿主语义不同 ✓）。
       落地量：读角色 store 的 update API ✓ → 加 import/布尔/渲染块 ✓ → zh/en 词条 ✓ ≈ **3 片** ✓。
+      **②落地规格（2026-09-14 终稿，可照做）**：持久化走 `charactersApi`（`@/lib/api/client` ✓，已有
+      `.get/.list/.create` ✓）；⚠️ **必须提交完整角色对象、不可只传补丁** ✗✗ —— 本仓 `saveCharacter.ts`
+      明写"它会**静默丢掉任何忘记带上的字段**" ✗✗（数据丢失风险 ✓）。实现：
+      `onGenerated(id, dataUrl)` → `const c = await charactersApi.get(character.id)` →
+      `charactersApi.update(c.id, { ...c, sprites: { ...c.sprites, [id]: dataUrl } })` ✓；`onPortrait` 同理写 `avatar` ✓；
+      `expressions` 取自 `@/lib/vn/expressions` ✓（VNStage 已引入 ✓）；`initialPrompt` =
+      `portrait of ${card.name}, ${card.description}`.slice(0,300) ✓。渲染块**照抄** `:1039-1047`
+      的 `vnHintIsWorldArt` 按钮 ✓（同款 className ✓）＋ `Modal` 挂载 ＋ 一个 `useState` ✓。
 - [ ] Gallery: a "music room" tab listing a world's uploaded BGM tracks (Ren'Py convention) — the
       tracks already exist per-world. `src/components/gallery/GalleryView.tsx`.
 
