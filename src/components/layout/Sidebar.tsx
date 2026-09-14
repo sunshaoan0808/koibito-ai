@@ -7,6 +7,7 @@ import {
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
+  Save,
   Search,
   Settings as SettingsIcon,
   Sparkles,
@@ -16,11 +17,12 @@ import {
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { t } from '@/lib/i18n'
 
-export type ViewId = 'chat' | 'branches' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings'
+export type ViewId = 'chat' | 'branches' | 'save-slots' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings'
 
 export const NAV: { id: ViewId; label: string; icon: LucideIcon }[] = [
   { id: 'chat', label: t('Chat'), icon: MessageCircle },
   { id: 'branches', label: t('Branch tree'), icon: GitBranch },
+  { id: 'save-slots', label: t('Save slots'), icon: Save },
   { id: 'assistant', label: t('Assistant'), icon: Sparkles },
   { id: 'characters', label: t('Characters'), icon: Users },
   { id: 'worlds', label: t('Worlds'), icon: Globe },

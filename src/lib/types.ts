@@ -190,6 +190,31 @@ export interface Scene {
   timePhase?: DayPhase | null
 }
 
+/**
+ * A named, full-state snapshot of one chat's story position (ROADMAP §12). Deliberately *not* a
+ * transcript: `counts` covers the chat row's story state plus its objectives, relationship events
+ * and facts, so returning to a slot restores where the story was, not just what was said.
+ *
+ * The snapshot payload itself never reaches the client — see `slotMeta` in `server/app.ts`. The
+ * server's own schema version travels as `schemaVersion` and is enforced on restore.
+ */
+export interface SaveSlot {
+  id: string
+  /** The chat this slot was taken from. */
+  chatId: string
+  name: string
+  createdAt: number
+  /** The source chat's title at the moment the slot was taken, so a list stays readable after a rename or delete. */
+  chatTitle?: string
+  schemaVersion: number
+  counts?: {
+    messages: number
+    objectives: number
+    relationshipEvents: number
+    facts: number
+  }
+}
+
 /** A discrete, durable fact about the user worth recalling later, distinct from `Chat.summary`'s lossy rolling prose. Fed into the prompt as a synthetic lorebook entry (`useChatSession.ts`'s `buildCurrentPrompt`). */
 export interface ChatFact {
   id: string
@@ -433,6 +458,8 @@ export interface Chat {
   parentChatId?: string
   /** The message (in the parent chat) this fork branched off from. */
   forkedFromMessageId?: string
+  /** Set when this chat was materialised by restoring a save slot (`server/saveSlots.ts`) — the slot's id. Paired with `parentChatId`, which links it back to the chat the slot was taken from while that chat still exists. */
+  restoredFromSlotId?: string
   /** Display-only "play style" label picked in `NewChatDialog` (defaults to the bound world's own
    *  template, editable independently) — decouples "how I play this chat" from "did I bind a
    *  world," per `WORLD_TEMPLATES`. Purely a label: it seeds `assistOverrides` once at creation

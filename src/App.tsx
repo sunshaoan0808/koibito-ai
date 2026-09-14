@@ -13,6 +13,7 @@ import { PersonasView } from '@/components/personas/PersonasView'
 import { WorldInfoView } from '@/components/worldinfo/WorldInfoView'
 import { GalleryView } from '@/components/gallery/GalleryView'
 import { BranchTreeView } from '@/components/chat/BranchTreeView'
+import { SaveSlotsView } from '@/components/chat/SaveSlotsView'
 import { SettingsView } from '@/components/settings/SettingsView'
 import { ToastViewport } from '@/components/ui/ToastViewport'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -149,6 +150,15 @@ export default function App() {
         {view === 'gallery' && <GalleryView />}
         {view === 'branches' && (
           <BranchTreeView
+            activeChatId={activeChatId}
+            onOpenChat={(id) => {
+              setActiveChatId(id)
+              setView('chat')
+            }}
+          />
+        )}
+        {view === 'save-slots' && (
+          <SaveSlotsView
             activeChatId={activeChatId}
             onOpenChat={(id) => {
               setActiveChatId(id)

@@ -136,6 +136,18 @@ db.exec(`
     data TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_chat_facts_chatId_createdAt ON chat_facts(chatId, createdAt);
+
+  -- Save slots (ROADMAP §12): a named, full-state snapshot of one chat's story position —
+  -- chat row + transcript + objectives + relationship events + facts, taken together so a
+  -- player can come back to "where I was" instead of treating the transcript as the only unit
+  -- of progress. The snapshot itself lives in the data column; only the lookup columns are promoted.
+  CREATE TABLE IF NOT EXISTS save_slots (
+    id TEXT PRIMARY KEY,
+    chatId TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    data TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_save_slots_chatId_createdAt ON save_slots(chatId, createdAt);
 `)
 
 type Row = Record<string, unknown>
@@ -254,6 +266,7 @@ export const objectiveStore = createStore('objectives', [
 ])
 export const relationshipEventStore = createStore('relationship_events', [{ name: 'chatId' }, { name: 'createdAt' }])
 export const chatFactStore = createStore('chat_facts', [{ name: 'chatId' }, { name: 'createdAt' }])
+export const saveSlotStore = createStore('save_slots', [{ name: 'chatId' }, { name: 'createdAt' }])
 
 export function newId(): string {
   return crypto.randomUUID()

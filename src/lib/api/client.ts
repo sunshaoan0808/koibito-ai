@@ -7,6 +7,7 @@ import type {
   Persona,
   RelationshipEvent,
   SamplerPreset,
+  SaveSlot,
   StoredMessage,
   Theme,
   WorldCard,
@@ -153,6 +154,24 @@ export const charactersApi = {
 export const personasApi = makeResource<Persona>('personas', '/personas')
 /** Plain assistant conversations (`lib/assistant/`) — no character, no relationship track. */
 export const assistantThreadsApi = makeResource<AssistantThread>('assistant-threads', '/assistant-threads')
+export const saveSlotsApi = {
+  ...makeResource<SaveSlot>('saveSlots', '/save-slots'),
+  /** Slots taken from one chat, newest first. */
+  async listForChat(chatId: string): Promise<SaveSlot[]> {
+    return request<SaveSlot[]>('GET', `/save-slots?chatId=${encodeURIComponent(chatId)}`)
+  },
+  /**
+   * Materialises a NEW chat from the slot. The chat the slot was taken from is never modified or
+   * swapped under the reader — hence the chat-list invalidation rather than a navigation side
+   * effect here; the caller decides where to send the player.
+   */
+  async restore(id: string): Promise<Chat> {
+    const result = await request<Chat>('POST', `/save-slots/${id}/restore`)
+    invalidate('chats')
+    invalidate('saveSlots')
+    return result
+  },
+}
 export const chatsApi = {
   ...makeResource<Chat>('chats', '/chats'),
   // Soft delete — the chat moves to the trash (`trash`/`restore`/`purge` below) rather than being

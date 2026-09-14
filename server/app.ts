@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import {
   characterStore,
   chatFactStore,
+  saveSlotStore,
   chatStore,
   db,
   assistantThreadStore,
@@ -23,6 +24,7 @@ import {
 import { removeAvatar, resolveAvatar, resolveAvatarMap, resolveAvatarMapVariants, resolveWorldBackgroundsNightMap, resolveWorldMusicMap } from './avatars.ts'
 import { encodeTokens, tokenizerForModel } from './novelaiTokenizer.ts'
 import { originGuard } from './originCheck.ts'
+import { SAVE_SLOT_SCHEMA_VERSION, resolveParentChatId, restorePlan, slotIsRestorable, snapshotCounts, type ChatSnapshot } from './saveSlots.ts'
 import { openMayhemRouter } from './openMayhem.ts'
 import { authGuard, loginHandler, llmProxy } from './llmProxy.ts'
 
@@ -785,6 +787,131 @@ app.delete('/api/chats/:id/purge', (req, res) => {
   if (!chatStore.get(chatId)) return notFound(res)
   purgeChat(chatId)
   res.status(204).end()
+})
+
+// ---- Save slots (ROADMAP §12) ----
+//
+// A slot is a named, full-state snapshot of one chat's story position. "Full state" is defined
+// against what this server actually persists per chat: the chat row itself (relationship stats,
+// realism, scene flags, summary, per-chat clock override, mode/overrides) plus its four satellite
+// tables. Restoring never touches the source chat — it materialises a NEW chat, the same
+// COPY-not-move rule the fork route above follows, so returning to an old slot cannot destroy the
+// live timeline. Unlike a fork, a slot keeps `worldInfoState` and `rapport`: a fork is a clean new
+// branch, whereas a slot is meant to be a faithful point-in-time capture, and both fields stay
+// coherent here because the transcript they're indexed against is copied whole.
+function chatSnapshot(chatId: string): ChatSnapshot | undefined {
+  const chat = chatStore.get(chatId)
+  if (!chat) return undefined
+  return {
+    chat,
+    messages: messageStore.list({ where: 'chatId = ?', params: [chatId], orderBy: 'createdAt' }),
+    objectives: objectiveStore.list({ where: 'chatId = ?', params: [chatId], orderBy: 'createdAt' }),
+    relationshipEvents: relationshipEventStore.list({ where: 'chatId = ?', params: [chatId], orderBy: 'createdAt' }),
+    facts: chatFactStore.list({ where: 'chatId = ?', params: [chatId], orderBy: 'createdAt' }),
+  }
+}
+
+/**
+ * Slot metadata without the snapshot payload. A snapshot can be an entire transcript, and the list
+ * only needs name/when/counts — the restore route reads the full row server-side, so the snapshot
+ * never has to travel to the client at all.
+ */
+function slotMeta(row: Record<string, unknown>): Record<string, unknown> {
+  const { snapshot: _snapshot, ...meta } = row
+  return meta
+}
+
+app.get('/api/save-slots', (req, res) => {
+  const chatId = typeof req.query.chatId === 'string' && req.query.chatId ? req.query.chatId : undefined
+  const rows = chatId
+    ? saveSlotStore.list({ where: 'chatId = ?', params: [chatId], orderBy: 'createdAt DESC' })
+    : saveSlotStore.list({ orderBy: 'createdAt DESC' })
+  res.json(rows.map(slotMeta))
+})
+
+app.get('/api/save-slots/:id', (req, res) => {
+  const row = saveSlotStore.get(req.params.id)
+  if (!row) return notFound(res)
+  res.json(slotMeta(row))
+})
+
+app.post('/api/save-slots', (req, res) => {
+  const chatId = String(req.body.chatId ?? '')
+  const name = String(req.body.name ?? '').trim()
+  if (!chatStore.get(chatId)) return notFound(res)
+  if (!name) return res.status(400).json({ error: 'name_required' })
+  if (name.length > 80) return res.status(400).json({ error: 'name_too_long' })
+  const snapshot = chatSnapshot(chatId)!
+  const slot = saveSlotStore.insert({
+    id: newId(),
+    chatId,
+    createdAt: Date.now(),
+    name,
+    chatTitle: snapshot.chat.title,
+    schemaVersion: SAVE_SLOT_SCHEMA_VERSION,
+    counts: snapshotCounts(snapshot),
+    snapshot,
+  })
+  res.status(201).json(slot)
+})
+
+// Rename only: the snapshot itself is immutable, so a slot always means the state it was taken at.
+app.put('/api/save-slots/:id', (req, res) => {
+  const name = String(req.body.name ?? '').trim()
+  if (!name) return res.status(400).json({ error: 'name_required' })
+  if (name.length > 80) return res.status(400).json({ error: 'name_too_long' })
+  const updated = saveSlotStore.update(req.params.id, { name })
+  if (!updated) return notFound(res)
+  res.json(updated)
+})
+
+app.delete('/api/save-slots/:id', (req, res) => {
+  if (!saveSlotStore.get(req.params.id)) return notFound(res)
+  saveSlotStore.remove(req.params.id)
+  res.status(204).end()
+})
+
+app.post('/api/save-slots/:id/restore', (req, res) => {
+  const slot = saveSlotStore.get(req.params.id)
+  if (!slot) return notFound(res)
+  if (!slotIsRestorable(slot)) {
+    return res.status(409).json({
+      error: 'slot_schema_mismatch',
+      expected: SAVE_SLOT_SCHEMA_VERSION,
+      found: slot.schemaVersion ?? null,
+    })
+  }
+
+  const plan = restorePlan(
+    slot.snapshot as ChatSnapshot,
+    {
+      chatId: newId(),
+      title: String(slot.name),
+      // Lineage, resolved against what still exists: the chat the slot was taken from if it is still
+      // here, otherwise the parent that chat itself had (see `resolveParentChatId`). Never a guess —
+      // the probe in the PR found an inherited id being written for a purge-ed parent.
+      parentChatId: resolveParentChatId(
+        [
+          String(slot.chatId),
+          typeof (slot.snapshot as ChatSnapshot).chat.parentChatId === 'string'
+            ? ((slot.snapshot as ChatSnapshot).chat.parentChatId as string)
+            : undefined,
+        ],
+        (id) => Boolean(chatStore.get(id)),
+      ),
+      slotId: String(slot.id),
+      now: Date.now(),
+    },
+    newId,
+  )
+
+  const restored = chatStore.insert(plan.chat)
+  for (const row of plan.messages) messageStore.insert(row)
+  for (const row of plan.objectives) objectiveStore.insert(row)
+  for (const row of plan.relationshipEvents) relationshipEventStore.insert(row)
+  for (const row of plan.facts) chatFactStore.insert(row)
+
+  res.status(201).json(restored)
 })
 
 // ---- Messages ----
