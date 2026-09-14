@@ -60,7 +60,10 @@ import { parseSfxWordList } from '@/lib/text/messageSegments'
 import { sfxConfigFor } from '@/lib/text/sfx'
 import { resolveExpressionSprite } from '@/lib/vn/expressions'
 import { currentOutfitFrom } from '@/lib/vn/outfits'
-import { vnArtHint, vnHintIsWorldArt } from '@/lib/vn/artHint'
+import { vnArtHint, vnHintCanGenerateSprites, vnHintIsWorldArt } from '@/lib/vn/artHint'
+import { DEFAULT_EXPRESSION_IDS, expressionCandidatesFor } from '@/lib/vn/expressions'
+import { GenerateExpressionSetDialog } from '@/components/characters/GenerateExpressionSetDialog'
+import { charactersApi } from '@/lib/api/client'
 import { getWorldTemplate } from '@/lib/world/worldTemplates'
 import { getEnergyRemaining, getMaxEnergyForDay, isNightPhase } from '@/lib/world/calendar'
 
@@ -492,6 +495,17 @@ export function VNStage({
   const vnArtHintDismissed = useSettingsStore((s) => s.vnArtHintDismissed)
   const dismissVnArtHint = useSettingsStore((s) => s.dismissVnArtHint)
   const artHint = vnArtHint(character, world, vnArtHintDismissed)
+  const [showExpressionSet, setShowExpressionSet] = useState(false)
+  const canGenerateSprites = vnHintCanGenerateSprites(character, vnArtHintDismissed)
+
+  // Persist through the FULL character object: `charactersApi.update` silently drops any field it
+  // isn't handed (`saveCharacter.ts` calls that trap out), so a partial patch would wipe the card.
+  const saveCharacterField = async (patch: Record<string, unknown>) => {
+    if (!character) return
+    const fresh = await charactersApi.get(character.id)
+    if (!fresh) return
+    await charactersApi.update(fresh.id, { ...fresh, ...patch })
+  }
   const personaName = persona?.name
   const reducedMotion = useSettingsStore((s) => s.reducedMotion)
   const vnTextSpeedMs = useSettingsStore((s) => s.vnTextSpeedMs)
@@ -1044,6 +1058,34 @@ export function VNStage({
                     >
                       Add scene art in the World editor
                     </button>
+                  )}
+                  {artHint && character && canGenerateSprites && (
+                    <button
+                      type="button"
+                      onClick={() => setShowExpressionSet(true)}
+                      className="mt-2 underline decoration-white/30 underline-offset-2 transition-colors hover:text-white"
+                    >
+                      Generate expression set
+                    </button>
+                  )}
+                  {showExpressionSet && character && (
+                    <GenerateExpressionSetDialog
+                      expressions={expressionCandidatesFor(DEFAULT_EXPRESSION_IDS, character.customExpressions).map((e) => ({
+                        id: e.id,
+                        label: e.label,
+                        hasSprite: !!character.sprites?.[e.id],
+                      }))}
+                      initialPrompt={
+                        character.card.description
+                          ? `portrait of ${character.card.name || 'a character'}, ${character.card.description}`.slice(0, 300)
+                          : ''
+                      }
+                      onGenerated={(id, dataUrl) =>
+                        void saveCharacterField({ sprites: { ...character.sprites, [id]: dataUrl } })
+                      }
+                      onPortrait={(dataUrl) => void saveCharacterField({ avatar: dataUrl })}
+                      onClose={() => setShowExpressionSet(false)}
+                    />
                   )}
                 </div>
               </div>
