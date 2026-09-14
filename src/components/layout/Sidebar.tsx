@@ -5,6 +5,7 @@ import {
   GitBranch,
   Globe,
   MessageCircle,
+  Newspaper,
   PanelLeftClose,
   PanelLeftOpen,
   Save,
@@ -17,12 +18,13 @@ import {
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { t } from '@/lib/i18n'
 
-export type ViewId = 'chat' | 'branches' | 'save-slots' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings'
+export type ViewId = 'chat' | 'branches' | 'save-slots' | 'town-feed' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings'
 
 export const NAV: { id: ViewId; label: string; icon: LucideIcon }[] = [
   { id: 'chat', label: t('Chat'), icon: MessageCircle },
   { id: 'branches', label: t('Branch tree'), icon: GitBranch },
   { id: 'save-slots', label: t('Save slots'), icon: Save },
+  { id: 'town-feed', label: t('Town feed'), icon: Newspaper },
   { id: 'assistant', label: t('Assistant'), icon: Sparkles },
   { id: 'characters', label: t('Characters'), icon: Users },
   { id: 'worlds', label: t('Worlds'), icon: Globe },

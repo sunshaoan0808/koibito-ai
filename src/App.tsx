@@ -14,6 +14,7 @@ import { WorldInfoView } from '@/components/worldinfo/WorldInfoView'
 import { GalleryView } from '@/components/gallery/GalleryView'
 import { BranchTreeView } from '@/components/chat/BranchTreeView'
 import { SaveSlotsView } from '@/components/chat/SaveSlotsView'
+import { TownFeedView } from '@/components/world/TownFeedView'
 import { SettingsView } from '@/components/settings/SettingsView'
 import { ToastViewport } from '@/components/ui/ToastViewport'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -159,6 +160,15 @@ export default function App() {
         )}
         {view === 'save-slots' && (
           <SaveSlotsView
+            activeChatId={activeChatId}
+            onOpenChat={(id) => {
+              setActiveChatId(id)
+              setView('chat')
+            }}
+          />
+        )}
+        {view === 'town-feed' && (
+          <TownFeedView
             activeChatId={activeChatId}
             onOpenChat={(id) => {
               setActiveChatId(id)

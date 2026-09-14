@@ -9,6 +9,7 @@ import type { ChatMessage } from '@/lib/prompt/builder'
 import type { InstructTemplate } from '@/lib/prompt/instructTemplates'
 import type { SceneTag } from '@/lib/vn/sceneTag'
 import type { WorldTemplateId } from '@/lib/world/worldTemplates'
+import type { FeedAt, FeedEntry } from '@/lib/world/townFeed'
 import type { ScenarioGraph } from '@/lib/dating/intimacyStages'
 import type { CustomBackground } from '@/lib/vn/backgrounds'
 import type { CharacterMood, CharacterNeed } from '@/lib/prompt/mindGuidance'
@@ -410,6 +411,13 @@ export interface Chat {
   sceneFlags?: SceneFlag[]
   /** Per-lorebook-entry sticky/cooldown bookkeeping, keyed `${book.sourceKey}:${entry.id}`. Unset = fresh. */
   worldInfoState?: Record<string, { activeUntil?: number; blockedUntil?: number; activeAt?: number }>
+  /** The off-screen town feed for this chat's world — see `world/townFeed.ts` and
+   *  `docs/design/town-feed.md`. World-level generation, chat-level storage: a chat row is the only
+   *  home phase 1 can give it without a schema migration (`server/db.ts` keeps everything but the
+   *  indexed columns in one JSON blob). */
+  townFeed?: FeedEntry[]
+  /** World-clock cell the feed above has been settled up to — the generator's resume point. */
+  townFeedSettledAt?: FeedAt
   /** Per-chat steering note (SillyTavern's Author's Note) — see `AuthorNote`. */
   authorNote?: AuthorNote
   giftCoins?: number

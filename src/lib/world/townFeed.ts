@@ -205,3 +205,100 @@ function nameList(characters: FeedCharacterLike[]): string {
   if (names.length === 2) return `${names[0]} and ${names[1]} were`
   return `${names[0]}, ${names[1]} and ${names.length - 2} other${names.length - 2 === 1 ? '' : 's'} were`
 }
+
+/** A chat's stored feed state — the only fields settlement cares about. */
+export interface FeedSettlementState {
+  id: string
+  townFeed?: FeedEntry[]
+  townFeedSettledAt?: FeedAt
+}
+
+export interface SettlementPlan {
+  chatId: string
+  /** Only what is new since this chat last settled. */
+  entries: FeedEntry[]
+  settledAt: FeedAt
+}
+
+/**
+ * Merge entries into a stored feed.
+ *
+ * Entries are keyed by id, and an id is a world-clock cell (`<worldId>:<day>:<phase>`), so merging
+ * the same stretch twice cannot double up. Order is world-clock ascending and the cap drops the
+ * oldest, matching what `generateTownFeed` leaves behind.
+ */
+export function mergeFeedEntries(existing: FeedEntry[], added: FeedEntry[], maxEntries?: number): FeedEntry[] {
+  const byId = new Map<string, FeedEntry>()
+  for (const entry of [...existing, ...added]) byId.set(entry.id, entry)
+  const ordered = [...byId.values()].sort((a, b) => cellIndex(a.at) - cellIndex(b.at))
+  const max = Math.max(0, maxEntries ?? DEFAULT_MAX_ENTRIES)
+  return ordered.slice(Math.max(0, ordered.length - max))
+}
+
+/**
+ * What each chat has to generate to bring its feed up to `now`.
+ *
+ * World-level generation, chat-level storage: the feed belongs to the world, but a chat row is the
+ * only home phase 1 can offer it without a schema migration. Only chats that are behind get a plan,
+ * and the resume point is exclusive — the settled cell is never regenerated.
+ *
+ * A chat whose resume point is *ahead* of `now` (a world or timeline switch) is resettled to `now`
+ * with nothing generated: winding the clock back must not fabricate news from the future.
+ */
+export function planSettlement(params: {
+  worldId: string
+  characters: FeedCharacterLike[]
+  now: FeedAt
+  chats: FeedSettlementState[]
+  maxEntries?: number
+}): SettlementPlan[] {
+  const plans: SettlementPlan[] = []
+  const nowCell = cellIndex(params.now)
+
+  for (const chat of params.chats) {
+    const settled = chat.townFeedSettledAt
+
+    if (!settled) {
+      // Never settled: start at this day's first cell rather than generating a 112-day backlog.
+      plans.push({
+        chatId: chat.id,
+        entries: generateTownFeed({
+          worldId: params.worldId,
+          from: { day: params.now.day, phaseIndex: 0 },
+          to: params.now,
+          characters: params.characters,
+          maxEntries: params.maxEntries,
+        }),
+        settledAt: params.now,
+      })
+      continue
+    }
+
+    const settledCell = cellIndex(settled)
+    if (settledCell > nowCell) {
+      plans.push({ chatId: chat.id, entries: [], settledAt: params.now })
+      continue
+    }
+    if (settledCell === nowCell) continue
+
+    plans.push({
+      chatId: chat.id,
+      entries: generateTownFeed({
+        worldId: params.worldId,
+        from: nextCell(settled),
+        to: params.now,
+        characters: params.characters,
+        maxEntries: params.maxEntries,
+      }),
+      settledAt: params.now,
+    })
+  }
+
+  return plans
+}
+
+/** The cell after `at` — settlement resumes here, never at the settled cell itself. */
+function nextCell(at: FeedAt): FeedAt {
+  const cell = cellIndex(at) + 1
+  return { day: Math.floor(cell / PHASES_PER_DAY), phaseIndex: cell % PHASES_PER_DAY }
+}

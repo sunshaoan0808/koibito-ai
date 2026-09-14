@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PHASES, type DayPhase, type ScheduleEntry } from './calendar'
-import { generateTownFeed, type FeedCharacterLike, type TownFeedInput } from './townFeed'
+import { generateTownFeed, mergeFeedEntries, planSettlement, type FeedCharacterLike, type TownFeedInput } from './townFeed'
 
 /** A work slot. Only `busy` counts as a shift — `available` is not work (`workSchedule.isWorkSlot`). */
 const shift = (phase: DayPhase, activity: string, location?: string): ScheduleEntry => ({
@@ -31,6 +31,76 @@ const base = (over: Partial<TownFeedInput> = {}): TownFeedInput => ({
   to: { day: 9, phaseIndex: PHASES.length - 1 },
   characters: [mira, tomas],
   ...over,
+})
+
+describe('planSettlement', () => {
+  const now = { day: 6, phaseIndex: 2 }
+
+  it('catches an unsettled chat up from the start of the current day', () => {
+    const [plan] = planSettlement({ worldId: 'world-1', characters: [mira, tomas], now, chats: [{ id: 'c1' }] })
+    expect(plan.chatId).toBe('c1')
+    expect(plan.settledAt).toEqual(now)
+    expect(plan.entries.length).toBeGreaterThan(0)
+    expect(plan.entries.every((e) => e.at.day === now.day)).toBe(true)
+  })
+
+  it('does nothing for a chat that is already current', () => {
+    const plans = planSettlement({
+      worldId: 'world-1',
+      characters: [mira, tomas],
+      now,
+      chats: [{ id: 'c1', townFeedSettledAt: now }],
+    })
+    expect(plans).toEqual([])
+  })
+
+  it('resumes after the settled cell and never regenerates it', () => {
+    const settled = { day: 6, phaseIndex: 0 }
+    const [plan] = planSettlement({
+      worldId: 'world-1',
+      characters: [mira, tomas],
+      now,
+      chats: [{ id: 'c1', townFeedSettledAt: settled }],
+    })
+    expect(plan.entries.every((e) => e.at.day * PHASES.length + e.at.phaseIndex > 6 * PHASES.length)).toBe(true)
+    expect(plan.settledAt).toEqual(now)
+  })
+
+  it('resettles without inventing news when the clock was rewound', () => {
+    const [plan] = planSettlement({
+      worldId: 'world-1',
+      characters: [mira, tomas],
+      now,
+      chats: [{ id: 'c1', townFeedSettledAt: { day: 9, phaseIndex: 3 } }],
+    })
+    expect(plan.entries).toEqual([])
+    expect(plan.settledAt).toEqual(now)
+  })
+
+  it('plans per chat, skipping the ones that are current', () => {
+    const plans = planSettlement({
+      worldId: 'world-1',
+      characters: [mira, tomas],
+      now,
+      chats: [{ id: 'c1' }, { id: 'c2', townFeedSettledAt: now }],
+    })
+    expect(plans.map((p) => p.chatId)).toEqual(['c1'])
+  })
+})
+
+describe('mergeFeedEntries', () => {
+  it('does not double up when the same stretch is merged twice', () => {
+    const all = generateTownFeed(base({ maxEntries: 999 }))
+    const first = mergeFeedEntries([], all.slice(0, 3))
+    expect(mergeFeedEntries(first, all.slice(0, 3))).toEqual(first)
+  })
+
+  it('keeps world-clock order and drops the oldest when the cap bites', () => {
+    const all = generateTownFeed(base({ maxEntries: 999 }))
+    const merged = mergeFeedEntries(all.slice(0, 3), all.slice(3, 5), 4)
+    expect(merged).toHaveLength(4)
+    expect(merged).toEqual(all.slice(1, 5))
+  })
 })
 
 describe('generateTownFeed', () => {

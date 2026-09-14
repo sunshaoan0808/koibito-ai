@@ -1,6 +1,20 @@
 // zh-CN dictionary: maps stock English UI strings to Chinese.
 // Add one entry per English string; t() falls back to the English input when missing.
 export const ZH: Record<string, string> = {
+  // Town feed (world/off-screen news)
+  'Town feed': '镇上消息',
+  'Catch up': '结算',
+  'Catching up…': '结算中…',
+  'Mark all read': '全部已读',
+  'Town feed caught up': '镇上消息已结算',
+  'Nothing new to catch up on': '没有新消息',
+  'In town': '镇上的事',
+  'Weather': '天气',
+  'Work': '工作',
+  'Word going round': '传闻',
+  'A new face': '新面孔',
+  'Nothing has been recorded here yet — the world keeps happening whether or not anyone is watching.':
+    '这里还没有记录——世界不会因为没人看着就停下。',
   // Language switcher
   'Language': '语言',
   'Stop dictation': '停止语音输入',
