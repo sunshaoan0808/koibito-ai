@@ -23,6 +23,7 @@
 import type { Character } from '@/lib/characters/cardSpec'
 import type { Chat, Persona, RegexScript, StoredMessage } from '@/lib/types'
 import { splitMessageSegments, type SfxConfig } from '@/lib/text/messageSegments'
+import { inlineAssetsHtml } from '@/lib/export/inlineAssetsHtml'
 import { applyRegexScripts } from '@/lib/text/regexScripts'
 
 /** Messages per chapter when the caller doesn't ask for something else. */
@@ -284,14 +285,16 @@ export function buildChatChapters(
 
 /** Punctuation-insensitive XHTML for one message body, from the same segment parser the live UI
  *  and the HTML transcript use (`splitMessageSegments` + display regex scripts). */
-function messageBodyXhtml(text: string, regexScripts?: RegexScript[], sfx?: SfxConfig): string {
+function messageBodyXhtml(text: string, regexScripts?: RegexScript[], sfx?: SfxConfig, assets?: Record<string, string>): string {
   return splitMessageSegments(applyRegexScripts(text, regexScripts, 'display'), sfx)
     .map((segment) => {
       const inner = escapeXml(segment.content).replace(/\r\n|\r|\n/g, '<br/>')
       if (segment.type === 'action') return `<em>${inner}</em>`
       if (segment.type === 'quote') return `<span class="quote">${inner}</span>`
       if (segment.type === 'sfx') return `<span class="sfx">${inner}</span>`
-      return inner
+      // The escape is injected because it must ALSO keep line breaks (`<br/>`), unlike the HTML
+      // transcript's — a plain `escapeXml` here would silently flatten the book's paragraphs.
+      return inlineAssetsHtml(segment.content, assets, (v) => escapeXml(v).replace(/\r\n|\r|\n/g, '<br/>'))
     })
     .join('')
 }
@@ -372,6 +375,8 @@ export interface ChatEpubOptions {
   regexScripts?: RegexScript[]
   /** Same SFX policy as `buildChatTranscriptHtml`'s. */
   sfx?: SfxConfig
+  /** Already-inlined `{{image::name}}` assets (data URLs) — the caller inlines once, like the transcript export, so the book stays self-contained and this stays sync. */
+  assetMap?: Record<string, string>
   /** Messages per chapter; defaults to `DEFAULT_MESSAGES_PER_CHAPTER`. */
   messagesPerChapter?: number
   /** Book title author, defaults to the primary character's name. */
@@ -392,6 +397,8 @@ interface RenderContext {
   regexScripts?: RegexScript[]
   sfx?: SfxConfig
   imagesByPayload: Map<string, string[]>
+  /** Inlined `{{image::name}}` assets, passed through from `ChatEpubOptions`. */
+  assetMap?: Record<string, string>
 }
 
 function speakerName(message: StoredMessage, ctx: RenderContext): string {
@@ -429,7 +436,7 @@ function chapterXhtml(chapter: ChatEpubChapter, ctx: RenderContext): string {
         .join('')
       return `    <article class="msg ${message.role === 'user' ? 'user' : 'char'}">
       <p class="who"><span class="name">${escapeXml(speakerName(message, ctx))}</span><span class="time">${escapeXml(isoDay(message.createdAt))}</span></p>
-      <p class="say">${messageBodyXhtml(message.text, ctx.regexScripts, ctx.sfx)}</p>${attachments}
+      <p class="say">${messageBodyXhtml(message.text, ctx.regexScripts, ctx.sfx, ctx.assetMap)}</p>${attachments}
     </article>`
     })
     .join('\n')
@@ -575,6 +582,7 @@ export function buildChatEpubEntries(opts: ChatEpubOptions): ZipEntry[] {
     personaName,
     participantNames: opts.participantNames,
     regexScripts: opts.regexScripts,
+    assetMap: opts.assetMap,
     sfx: opts.sfx,
     imagesByPayload: byPayload,
   }
