@@ -24,6 +24,17 @@ export function vnHintIsWorldArt(
   return !hasSceneBackgrounds(world)
 }
 
+/** True when the hint is the *missing expression sprites* case — the variant the one-click
+ *  expression-set generator (#125, `GenerateExpressionSetDialog`) can fix in place, so `VNStage`
+ *  can offer that button instead of only pointing at the character editor's Visual novel tab. */
+export function vnHintCanGenerateSprites(
+  character: Pick<Character, 'id' | 'card' | 'sprites'> | undefined,
+  dismissedCharacterIds: readonly string[],
+): boolean {
+  if (!character || dismissedCharacterIds.includes(character.id)) return false
+  return !character.sprites || Object.keys(character.sprites).length === 0
+}
+
 export function vnArtHint(
   character: Pick<Character, 'id' | 'card' | 'sprites'> | undefined,
   world: Pick<WorldCard, 'name' | 'backgrounds'> | undefined,

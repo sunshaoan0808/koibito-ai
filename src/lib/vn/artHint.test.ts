@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isVnReady, vnArtHint } from './artHint'
+import { isVnReady, vnArtHint, vnHintCanGenerateSprites } from './artHint'
 import type { Character } from '@/lib/characters/cardSpec'
 import type { WorldCard } from '@/lib/types'
 
@@ -21,6 +21,13 @@ describe('vnArtHint', () => {
     expect(vnArtHint(char({ sprites: {} }), undefined, [])).toMatch(/no expression sprites for mira/i)
     // even with a fully-stocked world, sprites are still the first thing called out
     expect(vnArtHint(char({ sprites: {} }), world({ backgrounds: { park: 'x' } }), [])).toMatch(/sprites/i)
+  })
+
+  it('names the sprite case as generatable (#125), and only that case', () => {
+    expect(vnHintCanGenerateSprites(char({ sprites: {} }), [])).toBe(true)
+    expect(vnHintCanGenerateSprites(char({ sprites: { happy: 'x' } }), [])).toBe(false)
+    expect(vnHintCanGenerateSprites(char({ sprites: {} }), ['c1'])).toBe(false)
+    expect(vnHintCanGenerateSprites(undefined, [])).toBe(false)
   })
 
   it('once sprites exist, flags an unbound world', () => {
