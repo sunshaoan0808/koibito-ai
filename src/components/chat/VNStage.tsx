@@ -1002,7 +1002,7 @@ export function VNStage({
       {showLog ? (
         // Top padding clears the floating HUD card, which stays up over the backlog; the width cap
         // keeps a long transcript readable on a wide monitor instead of running the full stage.
-        <div ref={logRef} className="relative z-10 flex-1 overflow-y-auto bg-bg/80 backdrop-blur-sm px-6 pb-6 pt-24 backdrop-blur">
+        <div ref={logRef} className="relative z-10 flex-1 overflow-y-auto bg-bg/80 backdrop-blur-sm px-6 pb-6 pt-24">
           <div className="mx-auto w-full max-w-3xl">
           <MessageLog
             messages={messages}
