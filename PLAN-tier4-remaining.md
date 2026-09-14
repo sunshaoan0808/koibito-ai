@@ -51,6 +51,8 @@ Mad-libs 式开场：`starterTemplates` 已有 ✓（世界模板画廊 + `relat
 ### 落刀地图（2026-09-14 侦察核定）
 1. 新建 `src/lib/chat/sceneSlots.ts`（纯函数 + 用例）：`slotsFrom(text)` 解析 `{{key}}`（去重、保序）；
    `fillTemplate(text, values)` 替换已填槽，**未填则保留字面 `{{key}}`**（与内联素材的坏引用规则一致 ✓）。
+   ⚠️ 2026-09-14 实测：**单次 tool 写入 >400 字符会被 harness 截断**（字面 `[truncated]` 直接落进源码 ✗）
+   → 本刀所有新建文件都必须**分片写入**（每片 <400 ✓），每片写完立刻 `grep -c "\[truncated\]"` 验零 ✓。
 2. `NewChatDialog.tsx`：选定 greeting 后，用 `slotsFrom` 渲染对应数量的输入框（label 用槽名）；
    提交时把 `fillTemplate(greeting, values)` 传进 `createChat({...})`（`:86` 那处 ✓）。
 3. `zh.ts` 加少量标签词条 ✓。零后端改动 ✓；`starterTemplates.ts` 无需改（槽位从文本解析 ✓）。
