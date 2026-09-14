@@ -2051,6 +2051,7 @@ export function CharacterEditor({
           expressions={allExpressions.map((exp) => ({ id: exp.id, label: exp.label, hasSprite: !!sprites[exp.id] }))}
           initialPrompt={form.description ? `portrait of ${form.name || 'a character'}, ${form.description}`.slice(0, 300) : ''}
           onGenerated={(expressionId, dataUrl) => setSprites((s) => ({ ...s, [expressionId]: dataUrl }))}
+          onPortrait={setAvatarDataUrl}
           onClose={() => setShowExpressionSetDialog(false)}
         />
       )}
