@@ -3,6 +3,7 @@ import type { Character } from '@/lib/characters/cardSpec'
 import type { Chat, Persona, RegexScript, StoredMessage } from '@/lib/types'
 import { splitMessageSegments, type SfxConfig } from '@/lib/text/messageSegments'
 import { applyRegexScripts } from '@/lib/text/regexScripts'
+import { inlineAssetsHtml, resolveAssetMap } from '@/lib/export/inlineAssetsHtml'
 
 function escapeHtml(text: string): string {
   return text
@@ -14,13 +15,13 @@ function escapeHtml(text: string): string {
 }
 
 /** Same action/quote/sfx convention as the live chat UI (`renderMessageText`), built from the same parser, with the same display-target regex scripts applied. */
-function messageTextHtml(text: string, regexScripts?: RegexScript[], sfx?: SfxConfig): string {
+function messageTextHtml(text: string, regexScripts?: RegexScript[], sfx?: SfxConfig, assets?: Record<string, string>): string {
   return splitMessageSegments(applyRegexScripts(text, regexScripts, 'display'), sfx)
     .map((seg) => {
       if (seg.type === 'action') return `<em>${escapeHtml(seg.content)}</em>`
       if (seg.type === 'quote') return `<span class="quote">${escapeHtml(seg.content)}</span>`
       if (seg.type === 'sfx') return `<span class="sfx">${escapeHtml(seg.content)}</span>`
-      return escapeHtml(seg.content)
+      return inlineAssetsHtml(seg.content, assets, escapeHtml)
     })
     .join('')
 }
@@ -53,6 +54,8 @@ export async function buildChatTranscriptHtml(opts: {
     urlToDataUrl(character?.avatarDataUrl),
     urlToDataUrl(persona?.avatarDataUrl),
   ])
+  // Same "inline once, up front" rule as the avatars above — the export must stay self-contained.
+  const characterAssets = await resolveAssetMap(character?.assets)
 
   const rows = messages
     .map((m) => {
@@ -69,7 +72,7 @@ export async function buildChatTranscriptHtml(opts: {
         <div class="bubble">
           <div class="meta"><span class="name">${escapeHtml(name)}</span><span class="time">${escapeHtml(time)}</span></div>
           ${imagesBlock}
-          <div class="text">${messageTextHtml(m.text, regexScripts, sfx)}</div>
+          <div class="text">${messageTextHtml(m.text, regexScripts, sfx, characterAssets)}</div>
         </div>
       </div>`
     })
