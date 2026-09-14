@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import type { ImageBackendSettings } from '@/lib/api/createImageBackend'
-import { appendImage, generateTurnImage, imageBackendBlocker, TURN_IMAGE_DEFAULTS } from './turnImage'
+import { appendImage, generateTurnImage, imageBackendBlocker, sceneSnapshotPrompt, TURN_IMAGE_DEFAULTS } from './turnImage'
 
 const generateImage = vi.fn()
 vi.mock('@/lib/api/createImageBackend', () => ({
@@ -89,5 +89,42 @@ describe('appendImage', () => {
     expect(next).toHaveLength(2)
     expect(existing).toHaveLength(1)
     expect(appendImage(undefined, 'x')).toEqual(['x'])
+  })
+})
+
+describe('sceneSnapshotPrompt', () => {
+  it('draws the newest character reply, prefixed as a picture rather than a continuation', () => {
+    const prompt = sceneSnapshotPrompt([
+      { role: 'user', text: '你在吗？' },
+      { role: 'char', text: '*She looks up.* "I am here."' },
+    ])
+    expect(prompt).toBe('anime style illustration, cinematic lighting: *She looks up.* "I am here."')
+  })
+
+  it('takes the last character reply, not the first or the newest line overall', () => {
+    const prompt = sceneSnapshotPrompt([
+      { role: 'char', text: 'first' },
+      { role: 'user', text: 'a later user line' },
+      { role: 'char', text: 'second' },
+    ])
+    expect(prompt).toContain('second')
+    expect(prompt).not.toContain('first')
+    expect(prompt).not.toContain('a later user line')
+  })
+
+  it('skips a blank character reply instead of drawing an empty scene', () => {
+    expect(sceneSnapshotPrompt([{ role: 'char', text: '   ' }, { role: 'char', text: 'real' }])).toContain('real')
+  })
+
+  it('returns null when the character has not spoken yet, so the caller can explain why', () => {
+    expect(sceneSnapshotPrompt([])).toBeNull()
+    expect(sceneSnapshotPrompt([{ role: 'user', text: 'hello?' }])).toBeNull()
+    expect(sceneSnapshotPrompt([{ role: 'char' }])).toBeNull()
+  })
+
+  it('caps how much transcript reaches the backend', () => {
+    const prompt = sceneSnapshotPrompt([{ role: 'char', text: 'x'.repeat(5000) }])
+    // prefix + the capped scene, never the whole turn
+    expect(prompt).toHaveLength('anime style illustration, cinematic lighting: '.length + 900)
   })
 })

@@ -73,3 +73,44 @@ export async function generateTurnImage(req: TurnImageRequest): Promise<TurnImag
 export function appendImage(existing: string[] | undefined, dataUrl: string): string[] {
   return [...(existing ?? []), dataUrl]
 }
+
+/**
+ * The slice of a transcript entry the snapshot builder needs. Structural rather than the full
+ * message type, so this stays a pure text-in/text-out step that a unit test can drive directly.
+ */
+export interface SnapshotMessage {
+  role: string
+  text?: string
+}
+
+/**
+ * The scene text is roleplay prose ("*She does not look up…*"), so the model has to be told it is
+ * drawing a picture rather than continuing the conversation.
+ */
+const SNAPSHOT_STYLE_PREFIX = 'anime style illustration, cinematic lighting: '
+
+/**
+ * How much transcript to keep. Measured against the live backend: 900 characters of scene finished
+ * in ~20 s and still read as one moment; feeding the whole turn just dilutes it.
+ */
+const SNAPSHOT_SCENE_LIMIT = 900
+
+/**
+ * Builds the prompt for an on-demand in-chat scene snapshot (AI Dungeon's "See"): the image shows
+ * *what is happening right now*, so the newest character reply **is** the scene — the writer
+ * clicks once and gets the moment drawn, with no description to type.
+ *
+ * Returns `null` when there is no character reply to draw, so the caller can say why rather than
+ * firing a request with an empty prompt. Deliberately no LLM summarisation step in between: that
+ * would turn a one-click action into a second, slower model round-trip for no gain.
+ */
+export function sceneSnapshotPrompt(messages: readonly SnapshotMessage[]): string | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i]
+    if (message.role !== 'char') continue
+    const scene = (message.text ?? '').trim()
+    if (!scene) continue
+    return SNAPSHOT_STYLE_PREFIX + scene.slice(0, SNAPSHOT_SCENE_LIMIT)
+  }
+  return null
+}

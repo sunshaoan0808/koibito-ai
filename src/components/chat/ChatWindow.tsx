@@ -4,6 +4,7 @@ import {
   Backpack,
   CalendarDays,
   CalendarHeart,
+  Camera,
   Clapperboard,
   Download,
   FileJson,
@@ -34,7 +35,7 @@ import { chatJsonlFilename, downloadChatJsonl, serializeChatJsonl } from '@/lib/
 import { buildChatEpub, buildChatChapters, chatEpubFilename, downloadChatEpub } from '@/lib/export/epub'
 import { audiobookFilename, downloadAudiobook, narrateChapters, type NarrationProgress } from '@/lib/voice/audiobook'
 import { synthesizeSpeechClip } from '@/lib/voice/cloudTts'
-import { appendImage, generateTurnImage } from '@/lib/image/turnImage'
+import { appendImage, generateTurnImage, sceneSnapshotPrompt } from '@/lib/image/turnImage'
 import type { SlashOutcome } from '@/lib/chat/slashCommands'
 import { parseSfxWordList } from '@/lib/text/messageSegments'
 import { useBgmSceneStore } from '@/lib/store/useBgmSceneStore'
@@ -193,6 +194,36 @@ export function ChatWindow({
     }
   }
 
+  /**
+   * P2-5's snapshot half (AI Dungeon's "See"): draw *this moment* into the transcript from the
+   * newest character reply, reusing the very backend `/image` already runs on — one click, nothing
+   * to type. Sibling of `runImageCommand` above; the only real difference is where the prompt comes
+   * from, which is why `sceneSnapshotPrompt` is a pure function rather than inline string work.
+   */
+  const runSceneSnapshot = async () => {
+    const target = [...(messages ?? [])].reverse().find((m) => m.role === 'char')
+    const prompt = sceneSnapshotPrompt(messages ?? [])
+    if (!target || !prompt) {
+      toastError('No reply to snapshot yet.')
+      return
+    }
+    setSnapshotting(true)
+    try {
+      const { dataUrl } = await generateTurnImage({
+        settings: { imageBackend, imageBackendBaseUrl, imageBackendUsername, imageBackendPassword, imageBackendModel, openMayhemApiKey },
+        prompt,
+      })
+      // Re-read first: the turn may already carry images (one turn can gather several).
+      const fresh = await messagesApi.get(target.id)
+      await messagesApi.update(target.id, { images: appendImage(fresh?.images, dataUrl) })
+      toastInfo('Snapshot attached to the last reply.')
+    } catch (e) {
+      toastError(errorMessage(e))
+    } finally {
+      setSnapshotting(false)
+    }
+  }
+
   const globalVisualNovelMode = useSettingsStore((s) => s.visualNovelMode)
   const vnInputMode = useSettingsStore((s) => s.vnInputMode)
   const autoTrackRelationship = useSettingsStore((s) => s.autoTrackRelationship)
@@ -230,6 +261,8 @@ export function ChatWindow({
   const [armedIntimacyOptionId, setArmedIntimacyOptionId] = useState<string | null>(null)
   const [refreshingChoices, setRefreshingChoices] = useState(false)
   const [exporting, setExporting] = useState(false)
+  // P2-5's snapshot half: one click, ~20 s round-trip, so the toolbar carries the busy state.
+  const [snapshotting, setSnapshotting] = useState(false)
   // P2-3's audiobook half: narration runs sentence by sentence, so the button carries the count.
   const [audioProgress, setAudioProgress] = useState<NarrationProgress | null>(null)
   // VN quick menu's Auto toggle — off by default, never persisted, and reset below on every chat
@@ -597,6 +630,15 @@ export function ChatWindow({
     // P2-6: guests the scene invented, offered as candidates — nothing is created until the writer
     // clicks promote, and the whole panel is inert while the setting is off.
     { key: 'cast', icon: Drama, label: 'Dynamic cast', onClick: () => setShowCast(true) },
+    // P2-5's snapshot half: draws what is happening right now into the transcript, the same way
+    // `/image` does — so it sits with the other one-shot chat actions rather than in the composer.
+    {
+      key: 'snapshot',
+      icon: Camera,
+      label: snapshotting ? 'Snapshotting…' : 'Snapshot this moment',
+      disabled: snapshotting,
+      onClick: runSceneSnapshot,
+    },
   ]
   const toolbar = <ChatToolbar tone={toolbarTone} actions={toolbarActions} />
 
