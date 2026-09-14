@@ -45,4 +45,20 @@
 **先 A**（真实、可测、零评分风险），若你要更强的手感再叠 **B**（但 B 必须先写去重规则 + 测试）。
 C 只作为 A/B 之后的润色，不该单独立项。
 
-**要我开工的话，说"A"或"B"即可**；我会先出台账 diff 再落码。
+## 5. 后续核实（2026-09-14）：A 无需落码
+
+查 A 的实现路径发现**管线本就通、且已有测试**：`flag_set` 条件由 `world/triggers.ts:19/80/144`
+实现（`triggers.test.ts:52/53/90/239` 覆盖）；`intimacyStages.ts:131` 把它列入 `SHARED_KINDS`
+（与世界规则同一套），`intimacyStages.test.ts:75/81` 用 **`first_kiss`** —— 与 jealousy 同属
+`SCENE_FLAGS` —— 验证了同一路径；内容侧已有先例 `dating/scenarios.ts:99`。
+
+**结论**：`jealousy` 已被正确写入 `Chat.sceneFlags`，任何场景/世界规则都能用
+`{ kind: 'flag_set', flag: 'jealousy' }` 读它 —— 设置方无需改动。缺的只是**一个用它**的场景，
+那是**内容**；按"剧情助手仅辅助不代写"，这是你的笔。我能提供的只是结构（不含台词）：
+
+```ts
+{ kind: 'flag_set', flag: 'jealousy' }   // stage edge 或 world rule 的条件位
+```
+
+**故 Tier 3b ③ 的准确表述**（原台账前提有偏差）：不是"未接机械判定"，而是
+**机制已备且已测、尚无内容使用 jealousy**。想要更强手感可做 B（数值层，须先定去重规则）。
