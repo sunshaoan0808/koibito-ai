@@ -53,8 +53,10 @@ Mad-libs 式开场：`starterTemplates` 已有 ✓（世界模板画廊 + `relat
    `fillTemplate(text, values)` 替换已填槽，**未填则保留字面 `{{key}}`**（与内联素材的坏引用规则一致 ✓）。
    ⚠️ 2026-09-14 实测：**单次 tool 写入 >400 字符会被 harness 截断**（字面 `[truncated]` 直接落进源码 ✗）
    → 本刀所有新建文件都必须**分片写入**（每片 <400 ✓），每片写完立刻 `grep -c "\[truncated\]"` 验零 ✓。
-2. `NewChatDialog.tsx`：选定 greeting 后，用 `slotsFrom` 渲染对应数量的输入框（label 用槽名）；
-   提交时把 `fillTemplate(greeting, values)` 传进 `createChat({...})`（`:86` 那处 ✓）。
+2. ⚠️ **2026-09-14 亲测更正**：`NewChatDialog` 交给 `createChat` 的是 **`greetingIndex`（索引 ✗，不是文本 ✗）**
+   —— 见 `:94` 与 `:62` 的 `availableGreetings` → **替换不能在这层做** ✗✗。下一刀须先看
+   `src/lib/chat/createChat.ts` 把 greeting 落成开场消息的**位置**（客户端拼 content ✗ / 服务端按 index 取 ✗）：
+   若在服务端，需扩 `createChat` 参数（如 `slotValues`）并在落消息处调 `fillTemplate` ✓（纯函数已就位 ✓）。
 3. `zh.ts` 加少量标签词条 ✓。零后端改动 ✓；`starterTemplates.ts` 无需改（槽位从文本解析 ✓）。
 验收：单测（新纯函数）+ tsc；手测＝新建聊天选带 `{{}}` 的开场 → 填值 → 开场文本被替换 ✓。
 
