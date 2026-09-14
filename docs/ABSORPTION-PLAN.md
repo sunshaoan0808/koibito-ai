@@ -14,7 +14,7 @@
 | 地址 | 电脑 `http://localhost:5173` · 手机 `http://<本机局域网IP>:5173` |
 | 鉴权 | 口令登录（`data/config.json` → authPasscode，自行设置，勿提交仓库） |
 | LLM | 全云端：自建 new-api 网关，key 在 `data/config.json` → llmApiKey，服务端统一转发 |
-| 常用模型 | `deepseek-v4-flash`（实测中文 RP 好）、`kimi-k3`、`minimax-m3`；TTS/生图通道未开通 |
+| 常用模型 | `deepseek-v4-flash`（实测中文 RP 好）、`kimi-k3`、`minimax-m3`；**TTS 已通（2026-09-14）、生图已通（2026-09-14：`grok-imagine-image-2.0` via 本机 grok2api `:8020`，经出口桥服务端注入 key）** |
 | 测试 | `npm test`（**116 测试文件 / ~2156 用例**，2026-09-13 实测）、`npm run typecheck` |
 | 客户端连接设置 | Backend = OpenAI-compatible，Base URL = `/api/llm/v1`（走服务端代理），key 留空 |
 
@@ -84,12 +84,12 @@ FP 的梦境、"Our Story"时间线、承诺账本（日记卡片的 metadata.ki
 | 7 | **EPUB 导出 + 有声书** | 聊天变书 / 变有声书 | ✅ 已吸收 → P2-3（EPUB `fe21877`；有声书单文件 MP3 2026-09-13） |
 | 8 | **角色生成器深度版** | 语音访谈式提问、三阶段联动世界书、立绘否决门 | ✅ **已吸收**（2026-09-14）：**立绘否决门** `src/lib/characters/portraitRun.ts`（纯状态机 + 16 用例：过闸前花费恒为 0、重生成失败不丢已显示立绘、停止只保留已完成）＋表情包对话框接线。**三阶段联动** `generateFullCharacter.ts` 改滚动上下文（访谈先入 → profile 回流 → lore 吃全链）＋`aiAssist.ts` 的 `AiLoreSubject.context` 一处打通**全部**阶段，断言按"模型实际被告知了什么"验。**语音访谈** `src/lib/characters/interview.ts`（+21 用例：FP 提问顺序连同其理由——VOICE 先、APPEARANCE 最后、关系/NSFW 条件题；按提问序排列；截断不留半截问答；一条答案不算访谈）＋`InterviewPanel` 接线（语音走仓库**已有**的 `voice/dictation`，无语音输入时键盘作答同样可用）。全量 2567 用例 / 136 文件、三套 tsc、`vite build` 全过 |
 | 9 | **斜杠命令**（/image /skip 等） | FP `chat_command_handler` 30K | ✅ 已吸收 → P2-4 `fe21877`（`src/lib/chat/slashCommands.ts`） |
-| 10 | **图片工作流** | 聊天内 /image、图生图 Edit、Image Studio | ⚠️ **代码侧已交付**（P2-5，`src/lib/api/openaiImages.ts`），待自己的生图上游开通才能实跑 |
+| 10 | **图片工作流** | 聊天内 /image、图生图 Edit、Image Studio | ✅ **已打通（2026-09-14 端到端实测）**：上游 = 本机 grok2api `:8020`（`grok-imagine-image-2.0`，key 取 MuseAI drop-in）；链路 = 浏览器同源 `/api/llm` → `llmProxy` → koibito 出口桥 v1.2 生图分流 → `:8020`（**key 只存服务端**）。实证：页面 fetch 200/13.3s/258KB（b64 头 `/9j/4QJo` = JPEG）、UI 内 `/image` 出图回显 ✓、公网无 cookie 401。**注**：同行的"图生图 Edit"与"即时场景快照"**未实现**（grep `images/edits`/`img2img`/`imageEdit` 0 命中），已拆为独立待办 |
 | 11 | **动态客串 NPC** | `cast_detector` 自动发现路人并入戏 | ✅ 已吸收 → P2-6 `fe21877`（`src/lib/cast/detector.ts`，中英双轨抽取） |
 | 12 | **记忆反鹦鹉 + 去重** | 召回不复读用户原话、重复记忆不挤占提示词 | ✅ 已吸收 → P2-7 `fe21877`（`src/lib/worldinfo/dedupe.ts` **19 用例** + `text/slop.ts` 回声扫描） |
 | 13 | **BYAF 导入 / ST JSONL 导出** | 格式互通 | ✅ 已吸收 → P2-8 `fe21877`（`characters/byaf.ts` + `importExport.ts`） |
 
-> **对账结论（2026-09-13，2026-09-14 更新）**：本清单原列 13 项"未吸收"，按代码实测实为 **12 项已吸收（其中 #10 仅代码侧）**，
+> **对账结论（2026-09-13，2026-09-14 更新）**：本清单原列 13 项"未吸收"，按代码实测实为 **13 项已吸收**（#10 于 2026-09-14 端到端打通，不再有"仅代码侧"的尾巴），
 > 第 8 项**部分已吸收**（立绘否决门已落，余语音访谈式提问/三阶段联动世界书两项）。
 > 本表长期停留在计划阶段的旧状态，**违反第八条纪律第 4 项**（吸收完成须改状态）——已按 P1/P2 交付记录 + 实测数字纠正。
 

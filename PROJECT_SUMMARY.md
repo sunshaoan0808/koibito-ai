@@ -65,7 +65,7 @@
 | **插件 API**（自研 §12） | `src/lib/plugins/registry.ts` + `types.ts`；接入点唯一（`buildPrompt` 与 `/命令`）；侧栏「插件」面板，示例插件默认未授权 |
 | 文本处理 / 去重 | `src/lib/text/slop.ts`（含 `isVerbatimEcho`）、`messageSegments.ts`、`regexScripts.ts` |
 | 语音（TTS/STT） | `src/lib/voice/ttsProviders.ts`、`cloudTts.ts`（→ `/api/llm/v1/audio/speech`）、`stt.ts`、`vad.ts`、`dictation.ts` |
-| 生图后端 | `src/lib/api/`：`a1111Image` `comfyuiImage` `swarmuiImage` `novelaiImage` `openMayhemMedia` + `createImageBackend.ts` / `imageBackend.ts` |
+| 生图后端 | `src/lib/api/`：`openaiImages`（**2026-09-14 已打通**，走同源 `/api/llm`）`a1111Image` `comfyuiImage` `swarmuiImage` `novelaiImage` `openMayhemMedia` + `createImageBackend.ts` / `imageBackend.ts` |
 | 导出 | `src/lib/export/chatTranscript.ts`（HTML 记录） |
 | 鉴权 + LLM 代理 | `server/llmProxy.ts`（口令登录 + HMAC 会话 cookie + `/api/llm/*` 服务端转发） |
 | HTTP/路由 | `server/app.ts`（1,251 行）、`server/index.ts`（37 行） |
