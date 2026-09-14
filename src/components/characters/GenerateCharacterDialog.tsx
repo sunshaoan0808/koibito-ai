@@ -36,6 +36,8 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Chip } from '@/components/ui/Chip'
 import { TextAreaField } from '@/components/ui/Field'
+import { InterviewPanel } from '@/components/characters/InterviewPanel'
+import { transcriptIsUsable } from '@/lib/characters/interview'
 
 /** What the dialog hands back — a card always, plus the extra `Character`-level fields when the user
  *  picked "Full character". `CharacterEditor` spreads these into its own field state for review. */
@@ -71,6 +73,8 @@ export function GenerateCharacterDialog({
   const client = useChatBackendClient()
   const styleGuidance = useSettingsStore((s) => s.styleGuidance)
   const [mode, setMode] = useState<'brief' | 'portrait' | 'traits'>('brief')
+  const [showInterview, setShowInterview] = useState(false)
+  const [interviewTranscript, setInterviewTranscript] = useState('')
   const [scope, setScope] = useState<'full' | 'card'>('full')
   const [brief, setBrief] = useState('')
   const [traitPool, setTraitPool] = useState<TraitOptionPool | null>(null)
@@ -175,6 +179,7 @@ export function GenerateCharacterDialog({
         {
           brief: brief.trim() || undefined,
           portraitBase64: mode === 'portrait' ? await portraitBase64() : undefined,
+          interviewTranscript: transcriptIsUsable(interviewTranscript) ? interviewTranscript : undefined,
           worldTone,
           styleGuidance,
         },
@@ -344,6 +349,19 @@ export function GenerateCharacterDialog({
             Needs a vision-capable model loaded (mmproj). The same requirement Settings → Appearance's
             "Vision scene detection" already has.
           </p>
+        </div>
+      )}
+
+      {scope === 'full' && mode === 'brief' && (
+        <div className="mb-3">
+          <Button variant="ghost" onClick={() => setShowInterview((v) => !v)}>
+            {showInterview ? 'Hide interview' : 'Interview first (optional)'}
+          </Button>
+          <p className="mt-1 text-xs text-neutral-500">
+            Ask the character about itself first — the answers carry into every later generation stage, which
+            makes the lorebook more specific. At least two answers to count.
+          </p>
+          {showInterview && <InterviewPanel onChange={setInterviewTranscript} />}
         </div>
       )}
 
