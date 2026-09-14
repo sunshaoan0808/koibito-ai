@@ -1,6 +1,80 @@
+import type { Lorebook } from '@/lib/characters/cardSpec'
 import type { SocialConnectionLike } from '@/lib/world/ambientEvents'
 import { PHASES } from '@/lib/world/calendar'
 
+/** The narrow shape of a fact this module needs — `worldinfo/facts.ts` owns the wording. */
+export interface ClaimFactLike {
+  id: string
+  /** Already rendered for the prompt (pass `factContent(f)`); this module never rewrites it. */
+  text: string
+}
+
+/**
+ * Turn a scene's established facts into "who knows this" claims.
+ *
+ * Phase 2 keeps this derived rather than stored: fact rows already live per chat, so a claim about
+ * them costs nothing to recompute and cannot drift out of sync with what the prompt actually said.
+ * The moment claims have to travel between chats, `Chat.knowledgeClaims` takes over (zero migration).
+ */
+export function claimsFromFacts(params: {
+  facts: ClaimFactLike[]
+  /** Who was there when these were true — the scene's participants. */
+  witnesses: string[]
+  at: ClaimAt
+  scope: { worldId?: string; chatId?: string }
+}): KnowledgeClaim[] {
+  const witnesses = params.witnesses.filter(Boolean)
+  if (witnesses.length === 0) return []
+  return params.facts
+    .filter((fact) => fact.text.trim().length > 0)
+    .map((fact) => ({
+      id: `claim:${fact.id}`,
+      text: fact.text.trim(),
+      factId: fact.id,
+      // Keep one entry per character, in the order given, so a claim about a fact is byte-identical
+      // however many participants the scene has.
+      witnessedByIds: [...new Set(witnesses)],
+      toldIds: [],
+      at: params.at,
+      scope: params.scope,
+    }))
+}
+
+/** Token cap for the synthetic "What this character knows" book — same order as `FACTS_TOKEN_BUDGET`. */
+export const KNOWLEDGE_TOKEN_BUDGET = 200
+
+/**
+ * The gate, as a synthetic lorebook — deliberately the same shape `buildFactsLorebook` produces, so
+ * it rides the existing insertion and token-budget machinery instead of adding a second prompt path.
+ *
+ * Returns `[]` rather than an empty book when the character knows nothing: an empty section still
+ * costs a header and a slot.
+ */
+export function knowledgeLorebookFor(params: {
+  claims: KnowledgeClaim[]
+  characterId: string
+  limit?: number
+}): Lorebook[] {
+  const visible = visibleClaims(params.claims, params.characterId, { limit: params.limit })
+  if (visible.length === 0) return []
+  return [
+    {
+      name: 'What this character knows',
+      token_budget: KNOWLEDGE_TOKEN_BUDGET,
+      entries: visible.map((claim, i) => ({
+        id: i,
+        keys: [],
+        content: claim.text,
+        constant: true,
+        selective: false,
+        // Above the facts book: what someone personally knows outranks a general reminder.
+        insertion_order: 300 + i,
+        enabled: true,
+        activationMode: 'always' as const,
+      })),
+    },
+  ]
+}
 /**
  * The knowledge fog — who knows what, and how they came to know it.
  *

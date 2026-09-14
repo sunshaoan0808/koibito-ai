@@ -247,7 +247,8 @@ import {
 } from '@/lib/vn/sceneVision'
 import { assessRapport } from '@/lib/dating/rapport'
 import { bookAppliesToChat } from '@/lib/worldinfo/scope'
-import { buildFactsLorebook, dedupeFacts } from '@/lib/worldinfo/facts'
+import { buildFactsLorebook, dedupeFacts, factContent } from '@/lib/worldinfo/facts'
+import { claimsFromFacts, knowledgeLorebookFor } from '@/lib/knowledge/claims'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { errorMessage, toastError, toastInfo, toastSuccess } from '@/lib/store/useToastStore'
 import { playSendBlip } from '@/lib/audio/sfx'
@@ -631,6 +632,20 @@ export function useChatSession(chatId: string | null) {
       // P2-7: near-identical facts collapse before the token budget is spent, so a restatement does
       // not buy two slots. A fact that adds detail survives — the bands live in `worldinfo/dedupe.ts`.
       const factsLorebook = buildFactsLorebook(dedupeFacts(activeFacts)).map((b) => ({ ...b, sourceKey: 'facts' }))
+      // Knowledge fog (phase 2): the "who knows what" gate. Facts are per-chat today, so this is
+      // already narrow — but the gate has to exist *before* knowledge can travel between chats, and
+      // it is the only place that decides what a character is allowed to have seen. See
+      // `lib/knowledge/claims.ts` and `docs/design/knowledge-fog.md`.
+      const presentIds = [speaker.id, ...roster.map((c) => c.id)]
+      const knowledgeLorebook = knowledgeLorebookFor({
+        claims: claimsFromFacts({
+          facts: activeFacts.map((f) => ({ id: f.id, text: factContent(f) })),
+          witnesses: presentIds,
+          at: { day: world?.currentDay ?? 0, phaseIndex: world?.currentPhaseIndex ?? 0 },
+          scope: { worldId: character.worldId, chatId: freshChat.id },
+        }),
+        characterId: character.id,
+      }).map((b) => ({ ...b, sourceKey: 'knowledge' }))
       const affection = freshChat.affection ?? 0
       // One read of the char-reply count for the whole build — every turn-scoped window check below keys off it.
       const charReplyCount = countCharReplies(messages)
@@ -1157,7 +1172,7 @@ export function useChatSession(chatId: string | null) {
         chatSummary: freshChat.summary,
         worldDescription,
         worldMoment,
-        lorebooks: [...worldLorebook, ...lorebooks, ...boundBooks, ...factsLorebook],
+        lorebooks: [...worldLorebook, ...lorebooks, ...boundBooks, ...factsLorebook, ...knowledgeLorebook],
         template,
         contextBudget: Math.max(contextBudget, 256),
         scanDepth: 8,

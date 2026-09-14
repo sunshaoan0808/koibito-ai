@@ -1,6 +1,11 @@
 # 设计稿 · 知识迷雾（Knowledge Fog）
 
-> 状态：**一期已落地**（`src/lib/knowledge/claims.ts` ＋ `claims.test.ts`，9 用例）；二期（接提示词装配）与三期（编辑器维度＋去重协同）未做。
+> 状态：**一/二期已落地**（`src/lib/knowledge/claims.ts` ＋ `claims.test.ts`，15 用例）；三期（编辑器维度＋去重协同）未做。
+>
+> 二期的两点实现决定：**装配复用合成世界书形态**（`knowledgeLorebookFor` 产出与 `buildFactsLorebook`
+> 同形的 `Lorebook`），所以 `buildPrompt` 不用加新通道，接线点只有两处（`useChatSession.ts:633` 的
+> facts 段旁生成 ＋ `:1160` 的 `lorebooks` 拼接）；**claims 是派生的**（从既有 `chat_facts` 现算），
+> 不新增持久化——`Chat.knowledgeClaims` 留给"知识需要跨聊天旅行"的时候（零迁移路径已备好）。
 > 自研项，原项目 front-porch-AI 无此机制（实测全仓无知识状态模型）。
 > 落笔依据：本仓现码实测（行号见下）。
 
