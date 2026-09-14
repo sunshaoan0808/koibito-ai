@@ -6,11 +6,12 @@ import { SettingsFilterContext } from '@/lib/settings/settingsFilterContext'
 import { ConnectionSettings } from './ConnectionSettings'
 import { ThemeEditor } from './ThemeEditor'
 import { SamplingControls } from './SamplingControls'
+import { RoleplaySettings } from './RoleplaySettings'
 import { VoiceSettings } from './VoiceSettings'
 import { ImageGenSettings } from './ImageGenSettings'
 import { DataSettings } from './DataSettings'
 
-type Tab = 'connection' | 'appearance' | 'generation' | 'voice' | 'images' | 'data'
+type Tab = 'connection' | 'appearance' | 'generation' | 'roleplay' | 'voice' | 'images' | 'data'
 
 export function SettingsView() {
   const [tab, setTab] = useState<Tab>('connection')
@@ -20,6 +21,7 @@ export function SettingsView() {
     ['connection', t('Connection')],
     ['appearance', t('Appearance')],
     ['generation', t('Generation')],
+    ['roleplay', t('Roleplay')],
     ['voice', t('Voice')],
     ['images', t('Images')],
     ['data', t('Data')],
@@ -78,7 +80,7 @@ export function SettingsView() {
           ))}
         </div>
         {/* The filter sits inside the sticky block so it stays reachable from the bottom of a long
-            tab — which is the whole point, since Generation alone is ~17 cards. */}
+            tab — which is the whole point, since a tab can still run to a dozen cards. */}
         <div className="pt-3">
           <div className="relative">
             <Search
@@ -118,6 +120,7 @@ export function SettingsView() {
           {tab === 'connection' && <ConnectionSettings />}
           {tab === 'appearance' && <ThemeEditor />}
           {tab === 'generation' && <SamplingControls />}
+          {tab === 'roleplay' && <RoleplaySettings />}
           {tab === 'voice' && <VoiceSettings />}
           {tab === 'images' && <ImageGenSettings />}
           {tab === 'data' && <DataSettings />}

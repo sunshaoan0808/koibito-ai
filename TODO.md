@@ -379,11 +379,22 @@ play."
 
 ## Tier 5 — Red string between settings & pages (IA polish)
 
-- [ ] **Split the Generation settings tab** (~16 stacked sections today) into "Generation"
+- [x] **Split the Generation settings tab** (~16 stacked sections today) into "Generation"
       (sampler, presets, context, instruct template, prompt sections, system prompt, writing style)
       and "Roleplay" (relationship tracking, choices, objectives, memory, quick replies, slow-burn,
       intimacy). The "Plain chat vs dating sim" wall of text becomes the short intro to "Roleplay."
       `src/components/settings/SettingsView.tsx`, `SamplingControls.tsx`.
+      ✅ 2026-09-14 — counted **exactly 16** cards before the split, now **8 + 8**. `SamplingControls`
+      keeps context/prompt/sampler/presets/regex; new `RoleplaySettings.tsx` takes the mode explainer
+      + the scene mechanics. The three items this list left unassigned went: **Regex scripts →
+      Generation** (it post-processes produced text), **World clock → Roleplay** (scene ambience),
+      **Background AI assists → Roleplay** — that one is load-bearing, since all four toggles it
+      batch-sets live in the roleplay half and the shortcut must sit with its targets. Reordered the
+      roleplay half into this list's own order (relationship → choices → objectives → memory).
+      Also translated the `Authoring` / `Power user` eyebrows, which were falling back to English.
+      Verified in the browser: 7 tabs, both halves count 8, per-tab filtering works (`记忆`→1,
+      `预设`→1), and the desktop strip fits 7 without overflowing (598px content = 598px visible;
+      mobile uses the `<select>` so crowding isn't possible).
 - [x] **Sticky settings tab strip** — shipped (reworked after a first pass looked bad: the scroll
       container's top padding was offsetting the stick point, leaving a gap that scrolled content
       bled through). Now the "Settings" heading scrolls away and only the tab strip pins — opaque

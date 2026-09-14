@@ -392,4 +392,10 @@ export const ZH: Record<string, string> = {
   'Filter settings': '筛选设置',
   'Clear filter': '清除筛选',
   'Showing only cards matching “{q}”': '仅显示匹配「{q}」的卡片',
+
+  // Settings tabs / eyebrows (the Generation split; eyebrows had no translation before 2026-09-14)
+  'Roleplay': '角色扮演',
+  'Scene & relationship': '场景与关系',
+  'Authoring': '创作',
+  'Power user': '高级设置',
 }
