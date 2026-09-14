@@ -12,6 +12,17 @@ import type { WorldCard } from '@/lib/types'
  * enough art for VN mode to look intentional, or when the user has dismissed the hint for this
  * character.
  */
+/** True when the missing art is the *world*'s scene backgrounds — the one `vnArtHint` variant whose
+ *  fix lives in the world editor, so `VNStage` can deep-link without matching hint prose. */
+export function vnHintIsWorldArt(
+  character: Pick<Character, 'id' | 'card' | 'sprites'> | undefined,
+  world: Pick<WorldCard, 'name' | 'backgrounds'> | undefined,
+): boolean {
+  if (!character || !world || !character.sprites) return false
+  if (Object.keys(character.sprites).length === 0) return false
+  return !world.backgrounds || Object.keys(world.backgrounds).length === 0
+}
+
 export function vnArtHint(
   character: Pick<Character, 'id' | 'card' | 'sprites'> | undefined,
   world: Pick<WorldCard, 'name' | 'backgrounds'> | undefined,

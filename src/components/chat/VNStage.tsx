@@ -60,7 +60,7 @@ import { parseSfxWordList } from '@/lib/text/messageSegments'
 import { sfxConfigFor } from '@/lib/text/sfx'
 import { resolveExpressionSprite } from '@/lib/vn/expressions'
 import { currentOutfitFrom } from '@/lib/vn/outfits'
-import { vnArtHint } from '@/lib/vn/artHint'
+import { vnArtHint, vnHintIsWorldArt } from '@/lib/vn/artHint'
 import { getWorldTemplate } from '@/lib/world/worldTemplates'
 import { getEnergyRemaining, getMaxEnergyForDay, isNightPhase } from '@/lib/world/calendar'
 
@@ -202,6 +202,8 @@ interface VNStageProps {
   participantCharacters?: Character[]
   chat: Chat
   world?: WorldCard
+  /** Deep-link to the bound world's editor — the "no scene art yet" hint uses tab `'scenes'`; same plumbing as `RelationshipPanel`'s Customize link. */
+  onNavigateToWorld?: (worldId: string, tab?: string) => void
   messages: StoredMessage[]
   streamingText: string
   generatingMessageId: string | null
@@ -260,6 +262,7 @@ export function VNStage({
   participantCharacters,
   chat,
   world,
+  onNavigateToWorld,
   messages,
   streamingText,
   generatingMessageId,
@@ -1033,6 +1036,15 @@ export function VNStage({
                     <X size={13} strokeWidth={2} />
                   </button>
                   <p className="pr-3">{artHint}</p>
+                  {artHint && world && onNavigateToWorld && vnHintIsWorldArt(character, world) && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToWorld(world.id, 'scenes')}
+                      className="mt-2 underline decoration-white/30 underline-offset-2 transition-colors hover:text-white"
+                    >
+                      Add scene art in the World editor
+                    </button>
+                  )}
                 </div>
               </div>
             )}

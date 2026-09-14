@@ -1092,6 +1092,7 @@ export function ChatWindow({
           participantCharacters={participantCharacters}
           chat={chat}
           world={world}
+          onNavigateToWorld={onNavigateToWorld}
           messages={messages}
           streamingText={streamingText}
           generatingMessageId={generatingMessageId}
