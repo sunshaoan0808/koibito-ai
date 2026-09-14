@@ -388,7 +388,7 @@ stores everything as JSON blobs, most new fields need no migrations — just ext
       runs when locked entries exist AND depends on this call's own flag results).
 - [x] **`autoTrackRelationship` setting** — relationship tracking used to always run
       unconditionally, the only AI-assist feature (unlike summarize/objectives/choices) with no
-      toggle. Added alongside the others in Settings → Generation, default on; also gates the new
+      toggle. Added alongside the others in Settings → Roleplay, default on; also gates the new
       prompt-steering line above.
 - [x] **Milestone/unlock toasts** — stage-ups and gallery-CG unlocks used to be completely silent;
       the only way to notice one was to happen to open the Relationship panel or Gallery tab. Now
@@ -405,7 +405,7 @@ stores everything as JSON blobs, most new fields need no migrations — just ext
       has been). `intimacyGuidance()`
       ([src/lib/prompt/intimacyGuidance.ts](src/lib/prompt/intimacyGuidance.ts)) maps a new
       `IntimacyDetailLevel` (`'default' | 'fade_to_black' | 'suggestive' | 'explicit'`) to a prompt
-      instruction, picked via a Settings → Generation button row right under Slow-burn pacing.
+      instruction, picked via a Settings → Roleplay button row right under Slow-burn pacing.
       `'default'` sends no instruction at all — identical behavior to every chat before this setting
       existed, so nobody's existing output changes unless they deliberately pick a level, in either
       direction: towards less explicit (`fade_to_black`) or more (`explicit`, framed in its own
@@ -1534,11 +1534,11 @@ stores everything as JSON blobs, most new fields need no migrations — just ext
       a relationship delta or a new choice card appearing a few seconds after the reply reads as
       expected work rather than a glitch. They also now fire player-facing-first (relationship +
       choices before tasks + summary), so the results a user waits on queue ahead on the server.
-      The four Settings → Generation toggle descriptions were rewritten to be honest about the
+      The four Settings → Roleplay toggle descriptions were rewritten to be honest about the
       cost (each is a model call; on a local single-GPU server they queue with each other and
       ahead of the next reply) instead of the old "never blocks or delays it". (c) the one-switch
       "minimal assists" profile shipped as #128: two derived-state `Chip` buttons ("All assists on" /
-      "Minimal (all off)") in a new "Background AI assists" section atop Settings → Generation
+      "Minimal (all off)") in a new "Background AI assists" section atop Settings → Roleplay
       batch-set the same four toggles through their existing setters — no fifth persisted "profile"
       field to drift out of sync with the four real booleans, the individual toggles still work fine
       on their own either way. (a) shipped as #129, closing this bullet out in full: when
@@ -1987,7 +1987,7 @@ below:**
       (`+4 affection` from `5`→`8`) with a warm, non-verdict recap — no walkout language, no hidden-
       agenda reference, matching the gentler framing by design.
 - [x] **Difficulty setting** — done: a global Gentle / Normal / Harsh setting
-      (`useSettingsStore.relationshipDifficulty`, a segmented control under Settings → Generation →
+      (`useSettingsStore.relationshipDifficulty`, a segmented control under Settings → Roleplay →
       Relationship tracking, next to the existing auto-track toggle). Implemented as a single flat
       multiplier (`scaleDeltasForDifficulty` in `relationshipAssist.ts`: 0.6x / 1x / 1.6x, rounded to
       the nearest integer) applied at the one choke point both scoring paths already funnel
@@ -2443,7 +2443,7 @@ below:**
       bundling) and the backup/restore path (already generic, no change needed there).
       **The "gate the actual mechanics, not just the editor tabs" half, done in a follow-up pass**:
       `Chat.assistOverrides?: { autoTrackRelationship?, autoSuggestChoices? }` (`types.ts`) — unset
-      falls back to the global Settings → Generation default, same precedence style as
+      falls back to the global Settings → Roleplay default, same precedence style as
       `Character.instructTemplateId`. `assistOverridesForTemplate()` (`worldTemplates.ts`) seeds a
       brand-new chat's overrides from the bound world's template at creation time
       (`NewChatDialog`): Freeform and Slice of Life (whose own blurbs say "no romance mechanics")
@@ -3418,7 +3418,7 @@ SillyTavern docs/releases, RisuAI (CCv3, CBS/trigger system, regex scripts), Agn
       verbatim, exactly as if typed and sent by hand. New `QuickReply` type (`types.ts`), a
       `quickReplies` array in `useSettingsStore` (global, not per-chat/per-character — a fixed
       utility toolbar makes sense everywhere, unlike authored content tied to one world), a
-      `QuickRepliesSection` settings panel (Settings → Generation, `ListEditor` over label+message
+      `QuickRepliesSection` settings panel (Settings → Roleplay, `ListEditor` over label+message
       pairs) seeded with three starters ("Look around," "Let time pass," "Change the subject") that
       a returning user's own edits/deletions are never overwritten by. `QuickReplyBar.tsx` renders
       the row in both `ChatWindow` layouts and inside `VNStage`'s glass panel, reusing `ChoiceList`'s
@@ -4378,7 +4378,7 @@ Done so far (see checked boxes above for detail):
     talking and do it already" in the *same* reply — the relationship-difficulty slider (section 2)
     only scales numeric deltas and says so in its own copy ("never what a character says or how a
     scene plays out"); nothing in the prompt actually asked the model to hold a line on scene
-    content itself. Added `slowBurnPacing` (Settings → Generation → Relationship tracking, on by
+    content itself. Added `slowBurnPacing` (Settings → Roleplay → Relationship tracking, on by
     default) alongside `avoidEmDashes`/`styleGuidance` in the same "right before generation"
     steering slot: an instruction that intimacy is earned gradually and a character should react in
     character — hesitation, deflection, or an outright no — rather than caving just to be agreeable.
@@ -4864,7 +4864,7 @@ Done so far (see checked boxes above for detail):
      existing output changes unprompted.
 112. ~~Section 9(c): a one-switch "minimal assists" Settings profile~~ — shipped as #128, picked
      directly off the "whats next" list: two derived-state `Chip` buttons ("All assists on" /
-     "Minimal (all off)") in a new "Background AI assists" section atop Settings → Generation,
+     "Minimal (all off)") in a new "Background AI assists" section atop Settings → Roleplay,
      batch-setting the four existing assist toggles (`autoSummarize`, `autoDetectTasks`,
      `autoTrackRelationship`, `autoSuggestChoices`) through their existing setters — the same
      derive-don't-duplicate pattern as the sampler-preset and instruct-template pickers elsewhere in
