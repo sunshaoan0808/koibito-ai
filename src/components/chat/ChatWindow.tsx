@@ -354,6 +354,7 @@ export function ChatWindow({
     setExporting(true)
     try {
       const html = await buildChatTranscriptHtml({
+        participantCharacters,
         chat,
         character,
         persona,

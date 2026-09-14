@@ -1,4 +1,5 @@
 import { urlToDataUrl } from '@/lib/characters/pack'
+import { rosterFrom } from '@/lib/chat/scene'
 import type { Character } from '@/lib/characters/cardSpec'
 import type { Chat, Persona, RegexScript, StoredMessage } from '@/lib/types'
 import { splitMessageSegments, type SfxConfig } from '@/lib/text/messageSegments'
@@ -46,8 +47,13 @@ export async function buildChatTranscriptHtml(opts: {
   regexScripts?: RegexScript[]
   /** SFX-burst policy — the global toggle plus the primary character's `sfxWords` (the export flattens speaker identity, so participant-specific vocab isn't threaded here). */
   sfx?: SfxConfig
+  /** Group-scene cast: names each guest's lines instead of crediting every line to the primary character. */
+  participantCharacters?: Character[]
 }): Promise<string> {
-  const { chat, character, persona, messages, regexScripts, sfx } = opts
+  const { chat, character, persona, messages, regexScripts, sfx, participantCharacters = [] } = opts
+  const speakerNames = new Map(
+    rosterFrom(character, participantCharacters).map((r) => [r.id, r.name] as const),
+  )
   const characterName = character?.card.name ?? 'Character'
   const personaName = persona?.name ?? 'You'
   const [characterAvatar, personaAvatar] = await Promise.all([
@@ -60,7 +66,7 @@ export async function buildChatTranscriptHtml(opts: {
   const rows = messages
     .map((m) => {
       const isUser = m.role === 'user'
-      const name = isUser ? personaName : characterName
+      const name = isUser ? personaName : (speakerNames.get(m.speakerId ?? chat.characterId) ?? characterName)
       const avatar = avatarHtml(isUser ? personaAvatar : characterAvatar, name)
       const images = (m.images ?? [])
         .map((src) => `<img class="attachment" src="${escapeHtml(src)}" alt="attachment">`)
