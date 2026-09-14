@@ -3,6 +3,7 @@ import { useApiQuery } from '@/lib/hooks/useApiQuery'
 import { charactersApi, personasApi, worldsApi } from '@/lib/api/client'
 import { useChatBackendClient } from '@/lib/hooks/useChatBackendClient'
 import { availableGreetings, createChat } from '@/lib/chat/createChat'
+import { slotsFrom } from '@/lib/chat/sceneSlots'
 import { WORLD_TEMPLATES, getWorldTemplate, normalizeWorldTemplateId, type WorldTemplateId } from '@/lib/world/worldTemplates'
 import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
@@ -28,6 +29,7 @@ export function NewChatDialog({
   const [personaName, setPersonaName] = useState('')
   const [personaDescription, setPersonaDescription] = useState('')
   const [greetingIndex, setGreetingIndex] = useState(0)
+  const [slotValues, setSlotValues] = useState<Record<string, string>>({})
   const [starterId, setStarterId] = useState<string>('')
   const [participantIds, setParticipantIds] = useState<string[]>([])
   // Defaults to the bound world's own template (falling back to 'dating_sim'); picking a chip
@@ -92,6 +94,7 @@ export function NewChatDialog({
       startingAffection: starter?.startingAffection ?? 0,
       summary: starter?.blurb || undefined,
       greetingIndex: greetingOptions.length > 0 ? greetingIndex : -1,
+      slotValues,
       mode,
       client,
     })
@@ -251,6 +254,11 @@ export function NewChatDialog({
               ))}
             </div>
             <p className="mt-1.5 truncate text-xs text-text-muted">{greetingOptions[greetingIndex]}</p>
+            {slotsFrom(greetingOptions[greetingIndex] ?? '').map((slot) => (
+              <input key={slot} value={slotValues[slot] ?? ''} placeholder={slot}
+                onChange={(e) => setSlotValues((v) => ({ ...v, [slot]: e.target.value }))}
+                className="mt-1.5 w-full rounded-lg bg-bg-sunken px-2 py-1 text-xs" />
+            ))}
           </div>
         )}
 
