@@ -25,6 +25,8 @@ import { buildCharacterPack, downloadCharacterPack, importCharacterPack, parseCh
 import { DEFAULT_EXPRESSIONS, slugifyExpressionId, type CustomExpression } from '@/lib/vn/expressions'
 import { BASE_OUTFIT_ID, expressionIdsForOutfit, outfitCoverage, slugifyOutfitId, spriteKey, type Outfit } from '@/lib/vn/outfits'
 import { hasSceneBackgrounds } from '@/lib/vn/backgrounds'
+import { rowsToAssets } from '@/lib/text/inlineAssets'
+import { InlineAssetRows } from '@/components/characters/InlineAssetRows'
 import { combinedSceneFlags } from '@/lib/dating/stage'
 import { getCalendarInfo } from '@/lib/world/calendar'
 import { estimateTokens } from '@/lib/tokenEstimate'
@@ -198,6 +200,10 @@ export function CharacterEditor({
   const [form, setForm] = useState(character?.card ?? blankCharacterData())
   const [avatarDataUrl, setAvatarDataUrl] = useState(character?.avatarDataUrl)
   const [sprites, setSprites] = useState<Record<string, string>>(character?.sprites ?? {})
+  // Rows, not the stored Record: renaming a key inside a Record loses the input's identity mid-typing.
+  const [assetRows, setAssetRows] = useState<{ name: string; url: string }[]>(() =>
+    Object.entries(character?.assets ?? {}).map(([name, url]) => ({ name, url })),
+  )
   const [spriteUnlocks, setSpriteUnlocks] = useState<Record<string, number>>(character?.spriteUnlocks ?? {})
   const [spriteVariants, setSpriteVariants] = useState<Record<string, string[]>>(character?.spriteVariants ?? {})
   const [customExpressions, setCustomExpressions] = useState<CustomExpression[]>(character?.customExpressions ?? [])
@@ -270,6 +276,7 @@ export function CharacterEditor({
     setForm(character?.card ?? blankCharacterData())
     setAvatarDataUrl(character?.avatarDataUrl)
     setSprites(character?.sprites ?? {})
+    setAssetRows(Object.entries(character?.assets ?? {}).map(([name, url]) => ({ name, url })))
     setSpriteVariants(character?.spriteVariants ?? {})
     setSpriteUnlocks(character?.spriteUnlocks ?? {})
     setCustomExpressions(character?.customExpressions ?? [])
@@ -431,6 +438,7 @@ export function CharacterEditor({
       card: form,
       avatarDataUrl,
       sprites,
+      assets: rowsToAssets(assetRows),
       spriteUnlocks,
       spriteVariants,
       outfits,
@@ -1122,6 +1130,13 @@ export function CharacterEditor({
             <button type="button" onClick={() => onNavigateToWorld(editingWorld.id, 'scenes')} className="text-accent hover:underline">Scenes tab</button>
           </p>
         )}
+        <Section
+          title="Inline assets"
+          description="Images this character can send with {{image::name}} in a message — a url or a data-url."
+          surface="bare"
+        >
+          <InlineAssetRows rows={assetRows} onChange={setAssetRows} />
+        </Section>
         <Section
           title="Expressions"
           description="Art per expression so Visual Novel mode shows the right one as the model tags each reply's mood. Blank falls back to the avatar. The small number is the warmth needed to unlock it."

@@ -63,3 +63,18 @@ export function resolveInlineAsset(name: string, assets: Record<string, string> 
   }
   return null
 }
+
+/** Author-side rows → the stored map: names/urls trimmed, blank rows dropped, first spelling wins. */
+export function rowsToAssets(rows: readonly { name: string; url: string }[]): Record<string, string> {
+  const out: Record<string, string> = {}
+  const seen = new Set<string>()
+  for (const row of rows) {
+    const name = row.name.trim()
+    const url = row.url.trim()
+    const key = name.toLowerCase()
+    if (!name || !url || seen.has(key)) continue
+    seen.add(key)
+    out[name] = url
+  }
+  return out
+}

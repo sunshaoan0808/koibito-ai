@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { extractInlineAssets, hasInlineAssets, resolveInlineAsset, splitInlineAssets } from './inlineAssets'
+import { extractInlineAssets, hasInlineAssets, resolveInlineAsset, rowsToAssets, splitInlineAssets } from './inlineAssets'
 
 describe('splitInlineAssets', () => {
   it('keeps the text around an embed, and reports the name', () => {
@@ -50,5 +50,18 @@ describe('resolveInlineAsset', () => {
     expect(resolveInlineAsset('', { park: 'data/park.png' })).toBeNull()
     expect(resolveInlineAsset('park', undefined)).toBeNull()
     expect(resolveInlineAsset('park', { park: '' })).toBeNull()
+  })
+})
+
+describe('rowsToAssets', () => {
+  it('trims, drops blank rows, and keeps the first spelling of a duplicate name', () => {
+    expect(
+      rowsToAssets([
+        { name: '  photo.png  ', url: ' data:a ' },
+        { name: '', url: 'x' },
+        { name: 'no-url', url: '   ' },
+        { name: 'PHOTO.PNG', url: 'data:b' },
+      ]),
+    ).toEqual({ 'photo.png': 'data:a' })
   })
 })
