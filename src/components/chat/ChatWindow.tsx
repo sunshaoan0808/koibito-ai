@@ -887,7 +887,7 @@ export function ChatWindow({
                 {chat.mode && (
                   <>
                     <span className="shrink-0 text-border">·</span>
-                    <span className="shrink-0">{getWorldTemplate(chat.mode).label}</span>
+                    <button type="button" onClick={() => setShowRelationship(true)} className="shrink-0 underline decoration-dotted underline-offset-2 hover:text-text" title="Mode from this chat's creation-time template — the per-chat overrides live in the relationship panel.">{getWorldTemplate(chat.mode).label}</button>
                   </>
                 )}
                 {presence && (
