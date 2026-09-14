@@ -1,6 +1,7 @@
 import type { ChatBackend } from '@/lib/api/chatBackend'
 import type { Outfit } from '@/lib/vn/outfits'
 import type { CharacterCardData, Lorebook, LorebookEntry } from './cardSpec'
+import { appendSubjectContext, clampTranscript, transcriptIsUsable } from './interview'
 import {
   draftCharacterBonds,
   draftCharacterFromBrief,
@@ -49,6 +50,12 @@ export interface FullCharacterSeed {
   /** The user's global "Writing style" setting — folded into every prose-bearing stage so the
    *  generated card matches the style they've asked for in chat. */
   styleGuidance?: string
+  /**
+   * Answers from the character interview (`interview.ts`), already assembled. Fed to every later
+   * stage as rolling context, so the character is written from what it said about itself rather
+   * than from the brief alone.
+   */
+  interviewTranscript?: string
 }
 
 export interface FullCharacterDraft {
@@ -80,6 +87,22 @@ const abortError = () => new DOMException('The character generation was stopped.
 
 export function isAbortError(e: unknown): boolean {
   return e instanceof DOMException && e.name === 'AbortError'
+}
+
+/**
+ * One line per settled fact, so the stages after the profile build on it instead of re-inventing a
+ * job or a home the profile already chose. Only the fields that change later prose are folded in —
+ * repeating the whole profile would spend prompt budget re-stating the card.
+ */
+function describeProfile(profile: DraftedProfile): string {
+  return [
+    profile.occupation ? `occupation ${profile.occupation}` : '',
+    profile.workplace ? `works at ${profile.workplace}` : '',
+    profile.homeLocation ? `lives in ${profile.homeLocation}` : '',
+    profile.goals.length > 0 ? `wants ${profile.goals.join(', ')}` : '',
+  ]
+    .filter(Boolean)
+    .join('; ')
 }
 
 function loreEntry(id: number, keys: string[], content: string): LorebookEntry {
@@ -142,6 +165,19 @@ export async function draftFullCharacter(
     extra: card.first_mes?.trim() ? `First message: ${card.first_mes.trim()}` : undefined,
   }
 
+  // Rolling context: each stage appends what it just established, and the stages after it read the
+  // accumulation. The interview goes in first (Front Porch runs its lorebook pass after the
+  // interview for exactly this reason), then the drafted profile — so the lorebook does not invent
+  // a job the profile already settled.
+  let rollingContext = ''
+  if (seed.interviewTranscript?.trim() && transcriptIsUsable(seed.interviewTranscript)) {
+    rollingContext = appendSubjectContext(
+      rollingContext,
+      `Interview with ${card.name}:\n${clampTranscript(seed.interviewTranscript.trim())}`,
+    )
+  }
+  const withContext = (): AiLoreSubject => ({ ...subject, context: rollingContext || undefined })
+
   let profile: DraftedProfile | null = null
   let bonds: DraftedBonds | null = null
   let outfits: Outfit[] | null = null
@@ -163,21 +199,23 @@ export async function draftFullCharacter(
   }
 
   await runStage('profile', async () => {
-    profile = await draftCharacterProfile(client, subject, { worldTone, styleGuidance, signal })
+    profile = await draftCharacterProfile(client, withContext(), { worldTone, styleGuidance, signal })
+    // Establish the profile for every stage after it.
+    rollingContext = appendSubjectContext(rollingContext, `Established — life: ${describeProfile(profile)}`)
   })
 
   await runStage('bonds', async () => {
-    bonds = await draftCharacterBonds(client, subject, { worldTone, styleGuidance, signal })
+    bonds = await draftCharacterBonds(client, withContext(), { worldTone, styleGuidance, signal })
   })
 
   await runStage('outfits', async () => {
-    const drafted = await draftCharacterOutfits(client, subject, { worldTone, signal })
+    const drafted = await draftCharacterOutfits(client, withContext(), { worldTone, signal })
     if (drafted.length === 0) throw new Error('The model did not propose any usable outfits.')
     outfits = drafted
   })
 
   await runStage('lore', async () => {
-    const entries = await suggestLoreEntries(client, subject, [], loreCount, signal)
+    const entries = await suggestLoreEntries(client, withContext(), [], loreCount, signal)
     if (entries.length === 0) throw new Error('The model did not propose any usable lore entries.')
     characterBook = {
       name: `${card.name} Lore`,

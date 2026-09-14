@@ -50,6 +50,12 @@ export interface AiLoreSubject {
   scenario?: string
   /** Extra free-text context with no fixed slot elsewhere (e.g. a world's "rules" field). */
   extra?: string
+  /**
+   * What earlier stages already established — an interview transcript, a drafted profile. Front
+   * Porch's generator runs its lorebook pass *after* the interview for the same reason: a later
+   * stage should build on the earlier ones instead of each seeing only the bare card.
+   */
+  context?: string
 }
 
 function contextSummary(subject: AiLoreSubject, omitField?: string): string {
@@ -61,6 +67,7 @@ function contextSummary(subject: AiLoreSubject, omitField?: string): string {
   if (omitField !== 'scenario' && subject.scenario?.trim())
     lines.push(`Scenario: ${subject.scenario.trim()}`)
   if (subject.extra?.trim()) lines.push(subject.extra.trim())
+  if (subject.context?.trim()) lines.push(subject.context.trim())
   return lines.join('\n')
 }
 

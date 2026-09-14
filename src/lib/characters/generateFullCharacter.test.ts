@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, type Mock } from 'vitest'
 import { draftFullCharacter, isAbortError, type FullCharacterStage, type StageStatus } from './generateFullCharacter'
 import type { ChatBackend } from '@/lib/api/chatBackend'
 
@@ -43,6 +43,53 @@ const LORE_JSON = JSON.stringify([
 
 /** The full happy-path call sequence, in stage order. */
 const ALL = [CARD_JSON, PROFILE_JSON, BONDS_JSON, OUTFITS_JSON, LORE_JSON]
+
+/**
+ * The stages are a chain, not five independent calls: Front Porch runs its lorebook pass after the
+ * interview for the same reason. These assert on what the model was actually told.
+ */
+describe('rolling context across stages', () => {
+  const TRANSCRIPT =
+    'Q: How do you talk?\nA: Like a lecture, and I tease when I trust you.\n\nQ: What do you want?\nA: To finish the wetlands survey.'
+  const promptsFrom = (client: ChatBackend) =>
+    (client.generate as Mock).mock.calls.map((call) => String((call[0] as { prompt?: string }).prompt))
+
+  it('feeds the interview to every stage, not just the card', async () => {
+    const client = sequenceClient(ALL)
+    await draftFullCharacter(client, { brief: 'A wetland ecologist.', interviewTranscript: TRANSCRIPT })
+    const prompts = promptsFrom(client)
+    expect(prompts.length).toBe(5)
+    for (const prompt of prompts.slice(1)) {
+      expect(prompt).toContain('Like a lecture, and I tease when I trust you.')
+    }
+  })
+
+  it('carries the drafted profile forward into the lorebook prompt', async () => {
+    const client = sequenceClient(ALL)
+    await draftFullCharacter(client, { brief: 'A wetland ecologist.', interviewTranscript: TRANSCRIPT })
+    const prompts = promptsFrom(client)
+    const lastPrompt = prompts[prompts.length - 1] ?? ''
+    // PROFILE_JSON says occupation "researcher" — the lore pass should be told, not left to invent.
+    expect(lastPrompt).toContain('occupation researcher')
+  })
+
+  it('ignores a transcript too thin to enrich from', async () => {
+    const client = sequenceClient(ALL)
+    await draftFullCharacter(client, {
+      brief: 'A wetland ecologist.',
+      interviewTranscript: 'Q: How do you talk?\nA: one answer only',
+    })
+    for (const prompt of promptsFrom(client)) expect(prompt).not.toContain('one answer only')
+  })
+
+  it('works without an interview at all, exactly as before', async () => {
+    const client = sequenceClient(ALL)
+    const draft = await draftFullCharacter(client, { brief: 'A wetland ecologist.' })
+    expect(draft.completed).toEqual(['card', 'profile', 'bonds', 'outfits', 'lore'])
+    const prompts = promptsFrom(client)
+    expect(prompts[prompts.length - 1] ?? '').not.toContain('Interview with')
+  })
+})
 
 /** Returns each response in order, one per `generate` call. */
 function sequenceClient(responses: string[]): ChatBackend {
