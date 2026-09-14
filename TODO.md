@@ -345,7 +345,14 @@ play."
       driven by triggers or regex. One of RisuAI's most-loved features and a natural fit here
       (triggers + regex + per-character assets all exist). Add `Character.assets` and a render pass
       in `MessageBubble` / `VNStage` / transcript export. `src/lib/characters/cardSpec.ts`,
-      `src/lib/text/messageText.tsx`, `src/lib/world/triggers.ts`.
+ `src/lib/text/messageText.tsx`, `src/lib/world/triggers.ts`.
+ ⚠️ 2026-09-14 进度：解析器 + `Character.assets` + `renderMessageText(…, assets)` + VNStage +
+ MessageBubble（含按发言者解析）**均已落地**（`da94c1f` → `ab17b41` → `bf1a34b`）。
+ **导出路径未接，且有一个非显然约束**：`export/chatTranscript.ts` 的 `buildChatTranscriptHtml`
+ 承诺"自包含可离线"（头像已内联为 data URL），故内联素材也必须 `urlToDataUrl` **内联** ——
+ 而 `urlToDataUrl` 是 **async**，`messageTextHtml` 是 sync → 接它要先把异步提升上去；
+ 且其签名只有主 `character`（无 `participantCharacters`），按发言者解析需扩签名并改调用方。
+ `export/epub.ts:25` 同理。
 - [ ] **Do / Say / Narrate input modes** (AI Dungeon). A composer mode chip that folds a light
       prefix hint into the turn — reduces ambiguity for a new user typing plain text. ROADMAP §15.
       `src/components/chat/Composer.tsx`, `src/lib/prompt/builder.ts` (`renderTurn`).
