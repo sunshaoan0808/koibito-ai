@@ -348,11 +348,16 @@ play."
       `src/lib/text/messageText.tsx`, `src/lib/world/triggers.ts`.
       ⚠️ 2026-09-14 进度：解析器 + `Character.assets` + `renderMessageText(…, assets)` + VNStage +
       MessageBubble（含按发言者解析）**均已落地**（`da94c1f` → `ab17b41` → `bf1a34b`）。
-      **导出路径未接，且有一个非显然约束**：`export/chatTranscript.ts` 的 `buildChatTranscriptHtml`
+      **导出路径：transcript 已接（②）、epub 未接；两处各有一条非显然约束**：`export/chatTranscript.ts` 的 `buildChatTranscriptHtml`
       承诺"自包含可离线"（头像已内联为 data URL），故内联素材也必须 `urlToDataUrl` **内联** ——
-      而 `urlToDataUrl` 是 **async**，`messageTextHtml` 是 sync → 接它要先把异步提升上去；
-      且其签名只有主 `character`（无 `participantCharacters`），按发言者解析需扩签名并改调用方。
-      `export/epub.ts:25` 同理。
+      ✅ transcript 侧**已接**（②，`ccc7094`）：开头 `await resolveAssetMap()` 内联一次，
+      `messageTextHtml` 保持 sync ✓；坏引用渲染名字 ✓。
+      而 **epub 的 async 边界在更上游**（2026-09-14 实测，`epub.ts:641`）：`downloadChatEpub(epub, filename)`
+      是 **sync**、只收**已构建好的字节** ✗ → 必须在它**上游** await：`buildChatEpub` 增一个
+      "已内联的 assets 映射"参数 ＋ `ChatWindow` 的 `exportEpub`（`:620`）先
+      `await resolveAssetMap(character?.assets)` ✓（epub 同样必须自包含 ✓）。epub 的段渲染是
+      `messageBodyXhtml(text, regexScripts?, sfx?)`（`epub.ts:287` ✓，与 transcript 同款 sync ✓）。
+      **涉及 3 个文件 ⇒ 单独一刀做** ✓。
       - [ ] **Do / Say / Narrate input modes** (AI Dungeon). A composer mode chip that folds a light
       prefix hint into the turn — reduces ambiguity for a new user typing plain text. ROADMAP §15.
       `src/components/chat/Composer.tsx`, `src/lib/prompt/builder.ts` (`renderTurn`).
