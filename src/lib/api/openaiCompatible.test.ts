@@ -344,12 +344,43 @@ describe('OpenAICompatibleClient — generate()', () => {
   })
 
   it('throws a specific error, not a bare empty string, when reasoning tokens filled the whole budget', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(jsonResponse(200, { choices: [{ message: { content: '', reasoning: 'thinking about it for a while...' } }] })),
-    )
+    const body = { choices: [{ message: { content: '', reasoning: 'thinking about it for a while...' } }] }
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(jsonResponse(200, body)))
+    vi.stubGlobal('fetch', fetchMock)
     const client = new OpenAICompatibleClient('https://openrouter.ai/api/v1', '', 'some/model:free')
     await expect(client.generate(BASE_REQUEST)).rejects.toThrow(/hidden reasoning/)
+    // The retry (see `reasoningRetryParams`) also came back all-reasoning, so the error is real.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  // The compatibility case the retry exists for: a model that thinks before answering used to look
+  // identical to a model with nothing to say. The larger budget lets it finish thinking and write.
+  it('retries once with room for the thinking phase, and returns the real reply', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.resolve(jsonResponse(200, { choices: [{ message: { content: '', reasoning: 'weighing the scene...' } }] })))
+      .mockImplementationOnce(() => Promise.resolve(jsonResponse(200, { choices: [{ message: { content: 'The real reply.' } }] })))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const client = new OpenAICompatibleClient('https://api.example.com/v1', '', 'gpt-4o-mini')
+    const text = await client.generate({ ...BASE_REQUEST, max_length: 300 })
+
+    expect(text).toBe('The real reply.')
+    const bodies = fetchMock.mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)))
+    expect(bodies[0].max_tokens).toBe(300)
+    // May exceed the character's reply band — that band bounds the visible reply, not the model's
+    // internal monologue (see `reasoningRetryParams`).
+    expect(bodies[1].max_tokens).toBe(2048)
+  })
+
+  it('never retries when the first attempt already wrote a reply', async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(jsonResponse(200, { choices: [{ message: { content: 'Answered.', reasoning: 'brief thought' } }] })),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new OpenAICompatibleClient('https://api.example.com/v1', '', 'gpt-4o-mini')
+    expect(await client.generate({ ...BASE_REQUEST, max_length: 300 })).toBe('Answered.')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it("also recognises DeepSeek's own reasoning_content name for the same field", async () => {
@@ -471,13 +502,68 @@ describe('OpenAICompatibleClient — generateStream()', () => {
     ]
       .map((e) => e + '\n\n')
       .join('')
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(sseResponse(events)))
+    // A fresh Response per call — a stream body can only be read once, and the client retries with a
+    // wider budget (see `reasoningRetryParams`). This covers the case where that retry is spent
+    // entirely on reasoning too, so the specific error must still surface.
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(sseResponse(events)))
+    vi.stubGlobal('fetch', fetchMock)
 
     const client = new OpenAICompatibleClient('https://openrouter.ai/api/v1', '', 'some/model:free')
     const tokens: string[] = []
     await expect(client.generateStream(BASE_REQUEST, (t) => tokens.push(t))).rejects.toThrow(/hidden reasoning/)
     // The reasoning text is never handed to the caller as if it were the reply.
     expect(tokens).toEqual([])
+    // One retry, no more: an endless thinker fails fast rather than looping.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const bodies = fetchMock.mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)))
+    expect(bodies[1].max_tokens).toBeGreaterThan(bodies[0].max_tokens)
+  })
+
+  // The compatibility case the retry exists for: a model that thinks before answering now gets a
+  // second chance with room for the hidden phase, instead of the reader seeing an error for a reply
+  // the model was perfectly willing to write.
+  it('retries once with room for the thinking phase, and returns the real reply', async () => {
+    const reasoningOnly = [
+      `data: ${JSON.stringify({ choices: [{ delta: { reasoning: 'weighing the scene...' } }] })}`,
+      'data: [DONE]',
+    ]
+      .map((e) => e + '\n\n')
+      .join('')
+    const realReply = [
+      `data: ${JSON.stringify({ choices: [{ delta: { content: 'Hi' } }] })}`,
+      'data: [DONE]',
+    ]
+      .map((e) => e + '\n\n')
+      .join('')
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.resolve(sseResponse(reasoningOnly)))
+      .mockImplementationOnce(() => Promise.resolve(sseResponse(realReply)))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const client = new OpenAICompatibleClient('https://api.example.com/v1', '', 'gpt-4o-mini')
+    const tokens: string[] = []
+    const full = await client.generateStream({ ...BASE_REQUEST, max_length: 300 }, (t) => tokens.push(t))
+
+    expect(full).toBe('Hi')
+    // Nothing from the thinking phase ever reached the screen, so the retry isn't a visible re-run.
+    expect(tokens).toEqual(['Hi'])
+    const bodies = fetchMock.mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)))
+    expect(bodies[0].max_tokens).toBe(300)
+    // The bump may exceed the character's reply band: that band bounds the visible reply, not the
+    // model's internal monologue (see `reasoningRetryParams`).
+    expect(bodies[1].max_tokens).toBe(2048)
+  })
+
+  it('never retries for a genuinely empty stream — an empty reply keeps its old meaning', async () => {
+    const events = ['data: [DONE]'].map((e) => e + '\n\n').join('')
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(sseResponse(events)))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const client = new OpenAICompatibleClient('https://api.example.com/v1', '', 'gpt-4o-mini')
+    const full = await client.generateStream(BASE_REQUEST, () => {})
+    expect(full).toBe('')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('never calls onToken with a reasoning delta, even when content deltas are also present', async () => {

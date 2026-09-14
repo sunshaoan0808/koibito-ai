@@ -144,6 +144,27 @@ export class OpenAICompatibleClient implements ChatBackend {
   }
 
   /**
+   * A reasoning model that burned the whole reply budget on thinking is not something the reader
+   * can fix from Settings: `max_length` here is the *character's* reply band (see
+   * `replyMaxTokens`), derived from the card's own example turn — a roleplay line never needs
+   * thousands of tokens, so the band stays small by design, and a hidden "thinking" phase eats all
+   * of it before a single word of the reply is written. No provider tells us ahead of time whether
+   * a given model thinks first, so the first request plays it safe as always and this retries
+   * *once* with room for the hidden phase on top of the original budget.
+   *
+   * The retry deliberately exceeds the caller's `max_length`: that band bounds the visible reply,
+   * not the model's internal monologue. Returning `null` when there's nothing to gain (no
+   * `max_length` set, or already at the floor) keeps a model that thinks without end from looping
+   * — the caller surfaces `reasoningExhaustedError` in that case instead.
+   */
+  private reasoningRetryParams(params: GenerateRequest): GenerateRequest | null {
+    const base = typeof params.max_length === 'number' && params.max_length > 0 ? params.max_length : 0
+    const bumped = Math.max(base * 4, 2048)
+    if (bumped <= base) return null
+    return { ...params, max_length: bumped }
+  }
+
+  /**
    * The fetch + error-classification shared by `generate` and `generateStream` — including the
    * one-time `max_tokens` -> `max_completion_tokens` retry (see `usesMaxCompletionTokens`'s doc
    * comment). Returns an `ok` `Response` with its body untouched, for the caller to read as JSON or
@@ -177,7 +198,8 @@ export class OpenAICompatibleClient implements ChatBackend {
     throw new KoboldApiError(`${failedMessage}: retry did not resolve.`)
   }
 
-  async generate(params: GenerateRequest, signal?: AbortSignal): Promise<string> {
+  /** One non-streaming round trip, reduced to the two message fields this client cares about. */
+  private async requestMessage(params: GenerateRequest, signal?: AbortSignal): Promise<{ content: string; reasoning: string }> {
     const res = await this.postChatCompletion(params, false, signal)
     const data = (await res.json()) as {
       choices?: { message?: { content?: string; reasoning?: string; reasoning_content?: string } }[]
@@ -189,20 +211,45 @@ export class OpenAICompatibleClient implements ChatBackend {
     }
     // `reasoning_content` is DeepSeek's own name for the same idea when reached directly (not through
     // OpenRouter's `reasoning`) — checked either way so this isn't tied to one provider's wire format.
-    const reasoning = message?.reasoning || message?.reasoning_content || ''
-    if (!content.trim() && reasoning.trim()) throw this.reasoningExhaustedError(reasoning.length)
-    return content
+    return { content, reasoning: message?.reasoning || message?.reasoning_content || '' }
   }
 
-  /** SSE streaming: splits on blank lines, reads `data:` lines, each payload `choices[0].delta.content`, ending on the `data: [DONE]` sentinel. */
-  async generateStream(params: GenerateRequest, onToken: (token: string, full: string) => void, signal?: AbortSignal): Promise<string> {
+  async generate(params: GenerateRequest, signal?: AbortSignal): Promise<string> {
+    // See `reasoningRetryParams`: the second entry is the one-shot bump for a model that thinks
+    // before it answers. Each attempt is a fresh request, so a retry here costs one round trip.
+    const retry = this.reasoningRetryParams(params)
+    const attempts: GenerateRequest[] = retry ? [params, retry] : [params]
+    let reasoningChars = 0
+    for (const attempt of attempts) {
+      const { content, reasoning } = await this.requestMessage(attempt, signal)
+      if (content.trim()) return content
+      // A genuinely empty reply (no reasoning either) keeps its pre-existing meaning: the caller
+      // decides what to make of it, exactly as before this retry existed.
+      if (!reasoning.trim()) return content
+      reasoningChars = reasoning.length
+    }
+    throw this.reasoningExhaustedError(reasoningChars)
+  }
+
+  /**
+   * One SSE pass: splits on blank lines, reads `data:` lines, each payload `choices[0].delta.content`,
+   * ending on the `data: [DONE]` sentinel. Returns the accumulated reply plus how many characters of
+   * hidden reasoning the provider streamed alongside it — the latter is never surfaced as reply text
+   * (`onToken` is never called with it), only tracked so an all-reasoning, no-content stream can be
+   * told apart from a model that legitimately sent nothing.
+   */
+  private async streamOnce(
+    params: GenerateRequest,
+    onToken: (token: string, full: string) => void,
+    signal?: AbortSignal,
+  ): Promise<{ content: string; reasoningChars: number }> {
     let res: Response
     try {
       res = await this.postChatCompletion(params, true, signal)
     } catch (e) {
-      // Matches this method's own pre-existing contract (distinct from `generate`'s, which throws):
-      // an abort before the request landed resolves quietly rather than surfacing as a failure.
-      if (signal?.aborted) return ''
+      // Matches `generateStream`'s own pre-existing contract (distinct from `generate`'s, which
+      // throws): an abort before the request landed resolves quietly rather than surfacing as a failure.
+      if (signal?.aborted) return { content: '', reasoningChars: 0 }
       throw e
     }
     if (!res.body) {
@@ -213,8 +260,6 @@ export class OpenAICompatibleClient implements ChatBackend {
     const decoder = new TextDecoder()
     let buffer = ''
     let full = ''
-    // Never surfaced as reply text (`onToken` is never called with it) — tracked only so an
-    // all-reasoning, no-content stream can be told apart from a model that legitimately sent nothing.
     let reasoningChars = 0
 
     try {
@@ -253,14 +298,27 @@ export class OpenAICompatibleClient implements ChatBackend {
         }
       }
     } catch (e) {
-      if (signal?.aborted) return full
+      if (signal?.aborted) return { content: full, reasoningChars }
       throw e
     }
     if (isOpenMayhem(this.baseUrl) && !full.trim()) {
       throw new KoboldApiError('OpenMayhem returned no reply text. Check the model and response token limit; generation may still have used credit.')
     }
-    if (!full.trim() && reasoningChars > 0) throw this.reasoningExhaustedError(reasoningChars)
-    return full
+    return { content: full, reasoningChars }
+  }
+
+  /** SSE streaming: reads `streamOnce`'s accumulated reply, retrying once for a reasoning model (see `reasoningRetryParams`). */
+  async generateStream(params: GenerateRequest, onToken: (token: string, full: string) => void, signal?: AbortSignal): Promise<string> {
+    const first = await this.streamOnce(params, onToken, signal)
+    // Nothing reached the screen yet — `onToken` is only ever called for real reply content, and a
+    // genuinely empty reply keeps its pre-existing meaning — so the retry below is invisible to the
+    // reader rather than a visible re-generation.
+    if (first.content.trim() || first.reasoningChars === 0) return first.content
+    const retry = this.reasoningRetryParams(params)
+    if (!retry) throw this.reasoningExhaustedError(first.reasoningChars)
+    const second = await this.streamOnce(retry, onToken, signal)
+    if (second.content.trim() || second.reasoningChars === 0) return second.content
+    throw this.reasoningExhaustedError(second.reasoningChars)
   }
 
   /** OpenMayhem publishes context metadata; other providers retain the caller's fallback. */
