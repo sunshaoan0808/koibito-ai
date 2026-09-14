@@ -13,6 +13,11 @@ export const ZH: Record<string, string> = {
   'Work': '工作',
   'Word going round': '传闻',
   'A new face': '新面孔',
+  // The view's description is a sentence, so it is translated; the count labels next to it ("Day 5",
+  // "3 entries", "2 unread") stay English on purpose — Chinese word order would need placeholders the
+  // dictionary does not support, and half-translated counters read worse than consistent English.
+  'The world does not pause while you are somewhere else. Everything here is derived from what the repo already knows — shift tables, the social graph, the weather on the world clock — never invented, and never narrated into the scene you are actually in.':
+    '你在别处的时候，世界并不会停下来。这里的一切都来自仓库本来就知道的东西——班表、社交关系、世界时钟上的天气——不凭空编造，也不会被叙述进你真正身处的那一幕。',
   'Nothing has been recorded here yet — the world keeps happening whether or not anyone is watching.':
     '这里还没有记录——世界不会因为没人看着就停下。',
   // Language switcher
