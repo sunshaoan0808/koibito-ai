@@ -223,12 +223,12 @@ export function Composer({
       >
         {composerError && <p className="mb-2 px-1.5 text-xs text-danger">{composerError}</p>}
         <div className="mb-1.5 flex items-center gap-1 px-1.5 text-[11px]">
-        {[false, true].map((isDo) => (
-          <button key={String(isDo)} type="button" onClick={() => setActionMode(isDo)} className={isDo === actionMode ? 'rounded-full bg-accent/15 px-2 py-0.5 text-accent' : 'rounded-full px-2 py-0.5 text-text-muted hover:text-text'}>
-            {isDo ? t('Do') : t('Say')}
-          </button>
-        ))}
-      </div>
+          {[false, true].map((isDo) => (
+            <button key={String(isDo)} type="button" onClick={() => setActionMode(isDo)} className={isDo === actionMode ? 'rounded-full bg-accent/15 px-2 py-0.5 text-accent' : 'rounded-full px-2 py-0.5 text-text-muted hover:text-text'}>
+              {isDo ? t('Do') : t('Say')}
+            </button>
+          ))}
+        </div>
       {intentSlot && !vn && (
           <div className="mb-2.5 border-b border-border/50 px-1.5 pb-2.5">{intentSlot}</div>
         )}
