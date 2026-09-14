@@ -263,7 +263,7 @@ const MIN_BATCH_FOR_AUTO_SUMMARY = 6
 /** Extra generation rounds `runGeneration` allows itself when a reply looks cut off by hitting max_length, before giving up and leaving it as-is. */
 const MAX_AUTO_CONTINUE_ROUNDS = 2
 
-/** A chat-level override (`Chat.assistOverrides`) wins over the global Settings → Generation default — unset falls back to it, same precedence style as `Character.instructTemplateId`. */
+/** A chat-level override (`Chat.assistOverrides`) wins over the global Settings → Roleplay default — unset falls back to it, same precedence style as `Character.instructTemplateId`. */
 function effectiveAssistFlag(chatOverride: boolean | undefined, globalDefault: boolean): boolean {
   return chatOverride ?? globalDefault
 }

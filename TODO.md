@@ -410,17 +410,22 @@ play."
       搜索框放进 `SettingsView.tsx` 的 sticky 区，`Section` 自身作唯一收口点。浏览器实测（生成 tab
       16 卡）：`记忆`→1、`生成`→1、`quick replies`→1、`关系 追踪`→1、空→16、清除按钮→16。
       注意：匹配的是**渲染后的文本**，所以中文界面下英文关键词不匹配已翻译的卡片标题（符合直觉）。
-- [ ] **Shared `<InheritableField>`** — a wrapper showing "inherited from World · override" for the
+- [x] **Shared `<InheritableField>`** — a wrapper showing "inherited from World · override" for the
       values that cascade (intimacy: global/world; instruct template: global/character; VN + assists:
       global/world-template/chat) instead of explaining precedence only in hint prose.
-      ⏳ 2026-09-14 部分落地 —— 共享徽章 `InheritanceBadge`（`src/components/ui/`）+ 纯解算器
+      ✅ 2026-09-14 落地（三个面）—— 共享徽章 `InheritanceBadge`（`src/components/ui/`）+ 纯解算器
       `src/lib/settings/inheritance.ts`（`inheritedFrom(value, layer)` → `null` = 在本层定的、
       `'global'` = 落穿到全局设置）已接在**聊天侧**三个覆盖选择器上（`RelationshipPanel` 的
       Track relationship / Suggest choices / Visual Novel mode），真实 UI 里两种徽章都验到了：
       `Auto` → 「已为本聊天覆盖」、`Use global default` → 「继承自全局设置」。`SelectField` 顺势补
       `actions` 槽（与 `TextAreaField` 对齐）好挂徽章。
-      **剩余两个面**：世界编辑器的亲密设定（world 层）、角色编辑器的 instruct template（character 层）。
-      **顺带修正**：拆分后这两条 hint 仍写着 "Settings → Generation"，实际已移到 Roleplay。
+      **三个面全部接上并实测**：聊天侧（上述）、世界编辑器的 Rating 控件（world 层）、角色编辑器
+      Advanced 页的 Instruct template override（character 层）。后两个面实测均为「继承自全局设置」
+      —— 库中两个世界都没设 `intimacyLevel`、所有角色都没设 `instructTemplateId`，所以"覆盖"态
+      在这两个面暂**无真实数据可验**（该态由单测 + 聊天面已实证的 `Auto` 例共同覆盖）。
+      **顺带修正**：拆分后有 **4 处**指向 "Settings → Generation" 的文案/注释已失效（应指 Roleplay）——
+      `WorldsView.tsx:866`、`types.ts:480`、`types.ts:488`、`useChatSession.ts:266`；其余 15 处仍正确
+      （instruct template / writing style / prompt sections / 采样器都留在 Generation 页）。
       **一条实测纠正**：运行时 assists 只有 **chat / global 两层**（`assistOverridesForTemplate()` 是
       新建聊天时把模板烘进 `assistOverrides` 种子），不存在活的 template 层，故徽章不谎报第三层。
 - [ ] **More cross-links** — mode chip → world template picker; locked VN background → world Scenes

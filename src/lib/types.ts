@@ -477,7 +477,7 @@ export interface Chat {
    *  world," per `WORLD_TEMPLATES`. Purely a label: it seeds `assistOverrides` once at creation
    *  (`assistOverridesForTemplate`) but is never live-recomputed from it afterward. */
   mode?: WorldTemplateId
-  /** Per-chat overrides for the global relationship-tracking/choice-suggestion toggles (Settings → Generation); unset falls back to the global default. Seeded once from the bound world's template at chat creation, not live-recomputed later. */
+  /** Per-chat overrides for the global relationship-tracking/choice-suggestion toggles (Settings → Roleplay); unset falls back to the global default. Seeded once from the bound world's template at chat creation, not live-recomputed later. */
   assistOverrides?: {
     autoTrackRelationship?: boolean
     autoSuggestChoices?: boolean

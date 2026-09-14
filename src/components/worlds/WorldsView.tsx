@@ -15,6 +15,8 @@ import { clockBoundaryNote } from '@/lib/world/workSchedule'
 import { WORLD_TEMPLATES, getWorldTemplate, hiddenWorldTabs, normalizeWorldTemplateId, type WorldTemplateId } from '@/lib/world/worldTemplates'
 import { newId } from '@/lib/id'
 import { NumberField, SelectField, TextAreaField, TextField } from '@/components/ui/Field'
+import { InheritanceBadge } from '@/components/ui/InheritanceBadge'
+import { inheritedFrom } from '@/lib/settings/inheritance'
 import type { IntimacyDetailLevel } from '@/lib/store/useSettingsStore'
 import { TriggerActionRows, TriggerConditionRows } from '@/components/worlds/TriggerRows'
 import { describeAction, describeCondition, slugifyTriggerId, type Trigger } from '@/lib/world/triggers'
@@ -852,6 +854,7 @@ function WorldEditor({
           >
             <SelectField
               label={t("Rating")}
+              actions={<InheritanceBadge layer="world" from={inheritedFrom(intimacyLevel, 'world', { nullIsUnset: true })} />}
               value={intimacyLevel ?? 'inherit'}
               onChange={(e) => setIntimacyLevel(e.target.value === 'inherit' ? undefined : (e.target.value as IntimacyDetailLevel))}
             >
@@ -863,7 +866,7 @@ function WorldEditor({
             </SelectField>
             <p className="mt-2 text-xs text-text-muted">
               {intimacyLevel === undefined
-                ? 'Follows whatever Settings → Generation is set to, changing with it.'
+                ? 'Follows whatever Settings → Roleplay is set to, changing with it.'
                 : intimacyLevel === 'default'
                   ? 'Pinned: this world sends no instruction either way, even if the global setting changes. Every intimate action stays available in the Relationship panel.'
                   : intimacyLevel === 'explicit'

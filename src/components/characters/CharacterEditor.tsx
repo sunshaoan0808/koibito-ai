@@ -29,6 +29,8 @@ import { getCalendarInfo } from '@/lib/world/calendar'
 import { estimateTokens } from '@/lib/tokenEstimate'
 import { newId } from '@/lib/id'
 import { NumberField, SelectField, TextAreaField, TextField } from '@/components/ui/Field'
+import { InheritanceBadge } from '@/components/ui/InheritanceBadge'
+import { inheritedFrom } from '@/lib/settings/inheritance'
 import { Button } from '@/components/ui/Button'
 import { Toggle } from '@/components/ui/Toggle'
 import { Chip } from '@/components/ui/Chip'
@@ -1935,6 +1937,12 @@ export function CharacterEditor({
             />
             <SelectField
               label="Instruct template override"
+              actions={
+                <InheritanceBadge
+                  layer="character"
+                  from={inheritedFrom(instructTemplateId || null, 'character', { nullIsUnset: true })}
+                />
+              }
               hint="Overrides the global Settings → Generation default for chats with this character. Useful for a character you always run against a specific model."
               value={instructTemplateId}
               onChange={(e) => setInstructTemplateId(e.target.value)}

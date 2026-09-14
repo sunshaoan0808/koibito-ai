@@ -77,7 +77,7 @@
 |---|---|---|---|
 | Tier 3b 游戏循环 | 4 | L322 / L327 / L331 / L335 | 主动角色实时节奏（聊天室模式，Outreach 已有 `useOutreachTick`）、关系日记/Confidant 页、群场景嫉妒与竞争（`jealousy` flag 未接机械判定）、路线/战役结构（11 天弧） |
 | Tier 4 竞争对齐与创作 | 9 | L344 / L349 / L352 / L357 / L361 / L363 / L365 / L370 / L374 | RisuAI 式内联素材 `{{image::name}}`、Do/Say/Narrate 输入模式、场景模板填空、存档槽、聊天文件夹/标签、分支树视图、组合式角色创建、用户脚本（Output hook 优先）、聊天内即时快照 |
-| Tier 5 信息架构 | **2/4**（设置搜索 ✅ 2026-09-14、拆分 Generation 页 ✅ 2026-09-14） | ~~L382~~ / ~~L395~~ / L397 / L400 | ~~拆分 Generation 设置页（实测确为 16 卡 → 8+8）~~、~~设置搜索~~、`<InheritableField>` 继承可视化、更多交叉链接 |
+| Tier 5 信息架构 | **3/4**（设置搜索 ✅、拆分 Generation 页 ✅、级联来源可视化 ✅ 2026-09-14） | ~~L382~~ / ~~L395~~ / ~~L397~~ / L400 | ~~拆分 Generation 设置页~~、~~设置搜索~~、~~级联来源可视化（`InheritanceBadge`，三面全接）~~、剩余：更多交叉链接（导航管线活，见 TODO L426） |
 | Tier 6（**2/6 已交付，后 4 项经实测重估**） | 6 | ⚠️ 原行号映射**已失效**（`ROADMAP.md`/`TODO.md` 中查无此 6 项，本表该行是唯一记录） | **✅ 已交付 2026-09-13（`82860bc`）**：① **VN 半透明日志按说话人配色** —— 新增 `src/lib/text/speakerTint.ts`（确定性哈希→固定色相：重载/换机同色；盒子用 inset shadow 画左侧色条，不引发布局位移；**仅 `VNStage` 传 `tintSpeakers`，经典视图零改动**）；② **画廊「音乐室」tab** —— 新增 `src/lib/audio/trackLibrary.ts`（把各世界 `music` 映射整理成可试听列表：默认曲/情绪曲/自定义曲排序 + 自动/手动标注）+ `GalleryView` 双 tab（CG art / Music room，按世界分组 + 内嵌 `<audio>` 试听）+ `absoluteUrl` 从 `BgmPlayer` 提为共享纯函数（DRY，base 可注入）。**⚠️ 余 4 项非"小打磨"**：`WorldCard` 组件**不存在**、世界类型**无开场字段**、画廊原本**没有 tab 结构**、Persona 相容加成**无现成模块**——各自需先设计（已从本行拆出，见下方"待立项"） |
 
 #### 待立项（自 Tier 6 拆出，2026-09-13 实测后重估）
