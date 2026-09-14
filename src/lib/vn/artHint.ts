@@ -1,5 +1,6 @@
 import type { Character } from '@/lib/characters/cardSpec'
 import type { WorldCard } from '@/lib/types'
+import { hasSceneBackgrounds } from '@/lib/vn/backgrounds'
 
 /**
  * "VN mode reads as broken before art exists" — a bare gradient plus a full-bleed avatar looks like
@@ -20,7 +21,7 @@ export function vnHintIsWorldArt(
 ): boolean {
   if (!character || !world || !character.sprites) return false
   if (Object.keys(character.sprites).length === 0) return false
-  return !world.backgrounds || Object.keys(world.backgrounds).length === 0
+  return !hasSceneBackgrounds(world)
 }
 
 export function vnArtHint(
@@ -32,7 +33,7 @@ export function vnArtHint(
 
   const name = character.card.name?.trim() || 'this character'
   const hasSprites = !!character.sprites && Object.keys(character.sprites).length > 0
-  const worldHasBackgrounds = !!world?.backgrounds && Object.keys(world.backgrounds).length > 0
+  const worldHasBackgrounds = hasSceneBackgrounds(world)
 
   if (!hasSprites) {
     return `No expression sprites for ${name} yet — add art in the character editor's Visual novel tab and it will show here.`

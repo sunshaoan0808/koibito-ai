@@ -48,6 +48,14 @@ export const DEFAULT_BACKGROUNDS: BackgroundOption[] = [
 
 export const DEFAULT_BACKGROUND_IDS = DEFAULT_BACKGROUNDS.map((b) => b.id)
 
+/** Whether a world actually points at any scene art. One definition because three places ask this
+ *  question — `vnArtHint`'s "world has no scene backgrounds" variant, `vnHintIsWorldArt`, and the
+ *  character editor's Visual novel tab — and a drifting copy would mean a link that fires while the
+ *  hint says something else. */
+export function hasSceneBackgrounds(world: { backgrounds?: Record<string, string> } | undefined): boolean {
+  return !!world?.backgrounds && Object.keys(world.backgrounds).length > 0
+}
+
 /**
  * A world-specific scene location beyond the 12 defaults — e.g. "the abandoned shrine" or "her
  * family's bookshop." Mirrors `CustomExpression` (`vn/expressions.ts`) exactly: same shape, same

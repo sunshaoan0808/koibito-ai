@@ -24,6 +24,7 @@ import {
 import { buildCharacterPack, downloadCharacterPack, importCharacterPack, parseCharacterPackFile } from '@/lib/characters/pack'
 import { DEFAULT_EXPRESSIONS, slugifyExpressionId, type CustomExpression } from '@/lib/vn/expressions'
 import { BASE_OUTFIT_ID, expressionIdsForOutfit, outfitCoverage, slugifyOutfitId, spriteKey, type Outfit } from '@/lib/vn/outfits'
+import { hasSceneBackgrounds } from '@/lib/vn/backgrounds'
 import { combinedSceneFlags } from '@/lib/dating/stage'
 import { getCalendarInfo } from '@/lib/world/calendar'
 import { estimateTokens } from '@/lib/tokenEstimate'
@@ -185,10 +186,13 @@ export function CharacterEditor({
   character,
   onSaved,
   onDeleted,
+  onNavigateToWorld,
 }: {
   character: Character | null
   onSaved: (id: string) => void
   onDeleted: () => void
+  /** Deep-link into the bound world's editor tab — backs the Visual novel tab's "no scene backgrounds yet" note. */
+  onNavigateToWorld?: (worldId: string, tab?: string) => void
 }) {
   const [tab, setTab] = useState('identity')
   const [form, setForm] = useState(character?.card ?? blankCharacterData())
@@ -1109,6 +1113,13 @@ export function CharacterEditor({
               Identity tab
             </button>
             .
+          </p>
+        )}
+        {worldId && editingWorld && onNavigateToWorld && !hasSceneBackgrounds(editingWorld) && (
+          <p className="rounded-xl bg-bg-sunken px-4 py-3 text-xs text-text-muted">
+            {editingWorld.name?.trim() || 'The bound world'} has no scene backgrounds yet, so VN scenes fall
+            back to a placeholder gradient — add them in the world editor's{' '}
+            <button type="button" onClick={() => onNavigateToWorld(editingWorld.id, 'scenes')} className="text-accent hover:underline">Scenes tab</button>
           </p>
         )}
         <Section

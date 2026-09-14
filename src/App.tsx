@@ -135,7 +135,7 @@ export default function App() {
         )}
         {view === 'assistant' && <AssistantView />}
         {view === 'characters' && (
-          <CharactersView initialCharacterId={pendingCharacterId} onConsumedInitial={() => setPendingCharacterId(null)} />
+          <CharactersView initialCharacterId={pendingCharacterId} onConsumedInitial={() => setPendingCharacterId(null)} onNavigateToWorld={navigateToWorld} />
         )}
         {view === 'worlds' && (
           <WorldsView
