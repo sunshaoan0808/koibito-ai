@@ -392,6 +392,8 @@ export interface Chat {
   /** Location/atmosphere framing plus who replies next in a group chat. Unset = today's manual behavior. See `Scene`. */
   scene?: Scene
   personaId: string
+  /** Free-form labels for filtering the chat list (`lib/chat/tags.ts`). Unset/empty = untagged. */
+  tags?: string[]
   title: string
   createdAt: number
   updatedAt: number

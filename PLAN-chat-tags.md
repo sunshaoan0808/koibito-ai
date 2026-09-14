@@ -18,7 +18,7 @@
 
 **只做「标签」，先不做「文件夹」** —— 理由：标签**多对多、无需层级与拖拽**，一个字段就能表达；文件夹要多一层树 + 拖拽排序 + 空文件夹语义，成本翻倍而收益重叠。
 
-1. **模型**：`Chat.tags?: string[]`（`types.ts` 的 `Chat` 接口），服务端 chats 更新白名单加一条（照 `app.ts:253` 的 gallery 写法：`Array.isArray` + 过滤空串 + 去重）
+1. **模型**：`Chat.tags?: string[]`（`types.ts` 的 `Chat` 接口）。✅ 2026-09-14 落码时发现**服务端零改动**：`app.put('/api/chats/:id')` 是纯透传（`const {characterId, id, createdAt, skipTouch, ...patch} = req.body`，**无字段白名单**），且 `server/db.ts:237` 的 `update` 是 `{ ...fromRow(existing), ...patch, id }` **任意键合并** → tags 直接落库，不需要 schema/迁移/端点。（本节原写"服务端白名单加一条"**是错的**，已更正。）
 2. **管理面**：**不做**第二个页面。落在**聊天列表顶部一行过滤条**（点标签=过滤，有 `+` 打标签到当前聊天）—— 这就是"authoring surface"，且不依赖拖拽
 3. **落库**：沿用 chats 现有 PATCH 路径（不新增表、不新增端点）
 
