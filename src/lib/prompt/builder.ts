@@ -7,6 +7,7 @@ import { applyRegexScripts } from '@/lib/text/regexScripts'
 import type { RegexScript } from '@/lib/types'
 import type { InstructTemplate } from './instructTemplates'
 import { DEFAULT_SYSTEM_PROMPT, IMPERSONATION_SYSTEM_PROMPT } from './systemPrompts'
+import { pluginRegistry, type PluginRegistry } from '@/lib/plugins/registry'
 
 export { DEFAULT_SYSTEM_PROMPT }
 export type { SystemPromptPreset } from './systemPrompts'
@@ -58,6 +59,11 @@ export interface ChatMessage {
 }
 
 export interface PromptBuildInput {
+  /**
+   * Plugin registry whose granted write hooks may edit the sections. Defaults to the app-wide
+   * registry; pass an empty one (as the tests do) and the output is byte-identical to the baseline.
+   */
+  plugins?: PluginRegistry
   character: CharacterCardData
   /** Pre-built life-context/voice note from `Character` fields not on the portable `CharacterCardData`. Folded into the identity block. */
   characterProfile?: string
@@ -259,17 +265,33 @@ export async function buildPrompt(input: PromptBuildInput): Promise<PromptBuildR
   const authorNotePosition = input.authorNote?.position ?? 'at_depth'
   const authorNoteDepth = Math.max(0, Math.floor(Number(input.authorNote?.depth) || 0))
 
+  // Plugin write hooks run exactly once, here: every section is written and nothing is assembled
+  // yet. Unauthorised hooks were never called at all (see `PluginRegistry`), so with no plugins
+  // registered this mapping is the identity and the prompt below is unchanged, byte for byte.
+  const hooked = (input.plugins ?? pluginRegistry).applyPromptHooks(
+    {
+      system: sections.system ? systemBlock : '',
+      summary: sections.summary ? summaryBlock : '',
+      world: sections.world ? worldBlock : '',
+      description: sections.description ? descriptionBlock : '',
+      participants: sections.participants ? participantsBlock : '',
+      persona: sections.persona ? personaBlock : '',
+      examples: exampleBlock,
+    },
+    { sections: Object.keys(DEFAULT_PROMPT_SECTIONS) as PromptSectionId[] },
+  ).sections
+
   const fixedSections = [
-    sections.system ? systemBlock : '',
-    sections.summary ? summaryBlock : '',
-    sections.world ? worldBlock : '',
+    hooked.system,
+    hooked.summary,
+    hooked.world,
     worldBefore,
     authorNoteText && authorNotePosition === 'before_char' ? authorNoteText : '',
-    sections.description ? descriptionBlock : '',
-    sections.participants ? participantsBlock : '',
+    hooked.description,
+    hooked.participants,
     worldAfter,
-    sections.persona ? personaBlock : '',
-    exampleBlock,
+    hooked.persona,
+    hooked.examples,
     authorNoteText && authorNotePosition === 'after_char' ? authorNoteText : '',
   ].filter(Boolean)
   // Wrap everything above the chat history in the template's system/opening turn markers (a no-op for `plain-chat`).

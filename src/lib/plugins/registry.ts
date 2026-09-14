@@ -46,18 +46,31 @@ interface RegisteredPlugin {
 export class PluginRegistry {
   private registered = new Map<string, RegisteredPlugin>()
   private grants = new Map<string, PluginGrants>()
-  private reserved: Set<string>
+  private extraReserved: string[]
   private hookStats = new Map<string, HookStats>()
   private clock: () => number
 
   /** `clock` is injectable so tests can assert timings without sleeping. */
   constructor(options: { reservedCommandNames?: string[]; now?: () => number } = {}) {
     // Built-ins are reserved by construction — a plugin may never shadow `/roll` or `/help`.
-    this.reserved = new Set(
-      options.reservedCommandNames ??
-        SLASH_COMMANDS.flatMap((command) => [command.name, ...command.aliases]),
-    )
+    this.extraReserved = options.reservedCommandNames ?? []
     this.clock = options.now ?? (() => (typeof performance === 'undefined' ? Date.now() : performance.now()))
+  }
+
+  /**
+   * Built-in command names, resolved **on demand**: a plugin may never shadow `/roll` or `/help`.
+   *
+   * A getter rather than a constructor field for a concrete reason — `slashCommands` imports this
+   * module, so reading its table while the registry initialises would run before that table exists.
+   * That cycle broke the slash-command tests; laziness is the fix, not a nicety.
+   */
+  private get reserved(): Set<string> {
+    const names = new Set(this.extraReserved)
+    for (const command of SLASH_COMMANDS) {
+      names.add(command.name)
+      for (const alias of command.aliases) names.add(alias)
+    }
+    return names
   }
 
   register(contribution: PluginContribution): void {
@@ -216,3 +229,12 @@ export class PluginRegistry {
     })
   }
 }
+
+/**
+ * The app-wide registry, declared after the class so there is no use-before-declaration.
+ *
+ * `buildPrompt` falls back to it when no registry is injected — that is what makes a plugin
+ * effective without touching the engine, and it keeps tests honest: pass an empty registry and the
+ * output must be byte-identical to the baseline.
+ */
+export const pluginRegistry = new PluginRegistry()

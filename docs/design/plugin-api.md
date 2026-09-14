@@ -1,6 +1,11 @@
 # 设计稿 · 插件 / 扩展 API（Plugin API）
 
-> 状态：**一期已落地**（`src/lib/plugins/types.ts` ＋ `registry.ts` ＋ `registry.test.ts`，7 用例）；二期（接 `buildPrompt` ＋ `/命令`）与三期（视图 ＋ 面板）未做。
+> 状态：**一/二期已落地**（`src/lib/plugins/{types,registry}.ts` ＋ `registry.test.ts` 7 用例 ＋ `integration.test.ts` 8 用例）；三期（视图 ＋ 面板）未做。
+>
+> 二期实现说明（接入点只有两个，引擎与 Composer 都不认识任何具体插件）：
+> - `buildPrompt`：七个 section 成文后、拼装前跑一次写入 hook；`input.plugins` **可注入**，默认全局单例。可注入是刻意的——测试传空注册表，输出必须与基线**逐字节相同**
+> - `/命令`：`allSlashCommandDefs()` ＝ 内置 ＋ 插件贡献，`/help` 与提示 chips 无需为插件开特例；`ResolvedSlashCommand.plugin` 让调用方走同一个 `SlashOutcome` 管道，插件抛错被包成 toast
+> - ⚠️ 踩到一个**真循环**：`slashCommands` import 注册表，而注册表原先在构造器里读 `SLASH_COMMANDS` → 求值顺序错乱，`slashCommands.test.ts` 整文件收集失败；改惰性 getter 解决。这是门禁抓到的，不是推演出来的
 >
 > 一期实现说明（四条验收全部有断言）：
 > - 三条**拒绝式**规则：hook 能力必须在 manifest 声明过、命令名不得与内置（含别名）或他插件撞车、

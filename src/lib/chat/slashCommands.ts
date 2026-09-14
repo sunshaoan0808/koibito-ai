@@ -3,7 +3,9 @@
  *
  * Everything in this file is pure: parsing, the command registry, the dice math, and the
  * dispatch all run without React, without the DOM, and without any API client, so the whole
- * surface is unit-testable in the node test environment. The composer owns only the wiring —
+ * surface is unit-testable in the node test environment. The one import is the plugin registry,
+ * which is itself pure — so plugin commands stay indistinguishable from built-ins at this layer.
+ * The composer owns only the wiring —
  * it recognises a leading "/", hands the line to `runSlashCommand`, and then applies the
  * returned outcome (a toast, a draft fill, a send, or a skip) through plumbing it already has.
  *
@@ -12,6 +14,9 @@
  * when one exists and otherwise answers with an explicit notice. It never calls a backend from
  * this module, and it never fails silently.
  */
+
+import { pluginRegistry } from '@/lib/plugins/registry'
+import type { CommandHook } from '@/lib/plugins/types'
 
 /** Source of randomness for `/roll` — injectable, so the dice are deterministic in tests. */
 export type SlashRng = () => number
@@ -57,7 +62,7 @@ export function slashCommandDraft(command: SlashCommandDef): string {
 
 /** Multi-line `/help` body. One usage plus summary per registered command. */
 export function slashHelpText(): string {
-  return ['可用命令：', ...SLASH_COMMANDS.map((c) => `${c.usage} — ${c.summary}`)].join('\n')
+  return ['可用命令：', ...allSlashCommandDefs().map((c) => `${c.usage} — ${c.summary}`)].join('\n')
 }
 
 // A leading "/" followed by a name, then free-form arguments on the same or following lines.
@@ -91,13 +96,26 @@ export function isSlashInput(input: string): boolean {
 
 export function findSlashCommand(name: string): SlashCommandDef | undefined {
   const needle = name.toLowerCase()
-  return SLASH_COMMANDS.find((c) => c.name === needle || c.aliases.includes(needle))
+  // Built-ins and plugin commands are indistinguishable here, so hint chips list both.
+  return allSlashCommandDefs().find((c) => c.name === needle || c.aliases.includes(needle))
 }
 
 export interface ResolvedSlashCommand {
   command: SlashCommandDef
   args: string
   raw: string
+  /** Set when a plugin provides this command — the caller then runs the hook, not a switch case. */
+  plugin?: CommandHook
+}
+
+/** Plugin hooks wear the built-in shape, so `/help`, the hint chips and lookup need no special case. */
+function pluginCommandDef(hook: CommandHook): SlashCommandDef {
+  return { name: hook.name, aliases: [], usage: `/${hook.name}`, summary: hook.description }
+}
+
+/** Built-ins first, then whatever plugins contributed. */
+export function allSlashCommandDefs(): SlashCommandDef[] {
+  return [...SLASH_COMMANDS, ...pluginRegistry.commands().map(pluginCommandDef)]
 }
 
 /**
@@ -111,7 +129,8 @@ export function resolveSlashCommand(input: string): ResolvedSlashCommand | undef
   if (!parsed) return undefined
   const command = findSlashCommand(parsed.name)
   if (!command) return undefined
-  return { command, args: parsed.args, raw: parsed.raw }
+  const plugin = pluginRegistry.commands().find((hook) => hook.name === command.name)
+  return { command, args: parsed.args, raw: parsed.raw, plugin }
 }
 
 export interface DiceSpec {
@@ -225,7 +244,20 @@ export function runSlashCommand(
 ): SlashOutcome | Promise<SlashOutcome> | undefined {
   const resolved = resolveSlashCommand(input)
   if (!resolved) return undefined
-  const { command, args } = resolved
+  const { command, args, plugin } = resolved
+
+  // A plugin command answers in the same currency as a built-in: an outcome the composer applies.
+  // Its own failures are contained here — a broken command must never take the composer down.
+  if (plugin) {
+    try {
+      const result = plugin.run(args, {})
+      return result.error
+        ? { kind: 'toast', tone: 'error', message: result.error }
+        : { kind: 'fill', text: result.insert ?? '' }
+    } catch (e) {
+      return { kind: 'toast', tone: 'error', message: e instanceof Error ? e.message : String(e) }
+    }
+  }
 
   switch (command.name) {
     case 'help':

@@ -6,9 +6,9 @@ P4 §12 里 **原项目 front-porch-AI 没有先例**的三项——按用户口
 |---|---|---|
 | [`town-feed.md`](./town-feed.md) | 世界在玩家不在场时也会发生事，沉淀成可读的"镇上消息" | **一/二期已落地**：`src/lib/world/townFeed.ts`（17 用例）＋ `TownFeedView`（已上站） |
 | [`knowledge-fog.md`](./knowledge-fog.md) | 角色不再全知：一件事只有见证者确知，其余经"告知"通路 | **一/二/三期已落地**：`src/lib/knowledge/claims.ts`（20 用例）＋ 提示词闸已接通 ＋ 传闻沿图流动（编辑器维度未做） |
-| [`plugin-api.md`](./plugin-api.md) | 不改主仓即可扩提示词 section / `/命令` / 视图 | **一期已落地**：`src/lib/plugins/registry.ts`（7 用例，纯核注册表）；二/三期未做 |
+| [`plugin-api.md`](./plugin-api.md) | 不改主仓即可扩提示词 section / `/命令` / 视图 | **一/二期已落地**：`src/lib/plugins/registry.ts`（15 用例）＋ 已接 `buildPrompt` 与 `/命令`（禁用后输出与基线逐字节相同）；视图/面板未做 |
 
-一期的共同边界：**纯函数 + 断言**——不碰 UI、不碰持久化、不接提示词、不调 LLM。二三期各自在稿子的「分期与验收」里。
+各稿一期的共同边界：**纯函数 + 断言**——不碰 UI、不碰持久化、不接提示词、不调 LLM；后续分期才逐步接线（每份稿子的「分期与验收」在文末）。
 
 ## 三份稿共同的实测前提
 

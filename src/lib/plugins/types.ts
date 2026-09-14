@@ -25,7 +25,8 @@ export interface PluginManifest {
 export interface PromptHookContext {
   /** Sections the engine is about to assemble. Read-only by construction. */
   sections: PromptSectionId[]
-  chatId: string
+  /** Absent when the caller has no chat in hand (e.g. a preview build). */
+  chatId?: string
   characterId?: string
 }
 
