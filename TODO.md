@@ -476,6 +476,12 @@ play."
       既有守护用例 `src/lib/vn/vnArtHintWorldLink.test.ts` ✓）；② 空状态渲染处接
       `src/components/characters/GenerateExpressionSetDialog.tsx`（#125 的 UI 入口 ✓）的打开按钮 ＋ zh/en 词条 ✓。
       **先落 ①（纯函数 + 用例，可独立提交 ✓）再接 ②** ✓ —— 与 ④/epub 同一成功模式 ✓。
+      **①已落**（`48f623b` ✓ `vnHintCanGenerateSprites` + 4 断言 ✓）。**②二次侦察（2026-09-14）**：
+      `VNStage.tsx:63` 导入处扩展 ✓、`:491-494` 已有 `vnArtHint(character, world, vnArtHintDismissed)` ✓
+      → 同处加一个布尔即可 ✓；⚠️ **但对话框与编辑器强耦合**：`GenerateExpressionSetDialog`
+      目前**只被 `CharacterEditor.tsx:2084` 使用** ✗（props 依赖编辑器状态，疑含未保存草稿 ✗）
+      → **别硬从 VNStage 直接打开** ✗；先读其 props 与编辑器挂载方式 ✓，再定"独立挂载 or 共用" ✓；
+      这一支属**设计判断**，不是机械改动 ✗。
 - [ ] Gallery: a "music room" tab listing a world's uploaded BGM tracks (Ren'Py convention) — the
       tracks already exist per-world. `src/components/gallery/GalleryView.tsx`.
 
