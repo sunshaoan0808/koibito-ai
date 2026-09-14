@@ -1,7 +1,21 @@
 # 设计稿 · 插件 / 扩展 API（Plugin API）
 
-> 状态：**设计稿（未实现）**。自研项，原项目 front-porch-AI 无此机制；且其铁律明确 **"All engines run in-process. No Python, no Rust, no sidecars"**（`AGENTS.md`→`CLAUDE.md`），本设计按同一约束落笔。
-> 落笔依据：本仓现码实测（行号见下）。
+> 状态：**一期已落地**（`src/lib/plugins/types.ts` ＋ `registry.ts` ＋ `registry.test.ts`，7 用例）；二期（接 `buildPrompt` ＋ `/命令`）与三期（视图 ＋ 面板）未做。
+>
+> 一期实现说明（四条验收全部有断言）：
+> - 三条**拒绝式**规则：hook 能力必须在 manifest 声明过、命令名不得与内置（含别名）或他插件撞车、
+>   **`prompt:write` 未授权时 transform 根本不被调用**（强负例用 `calls` 空数组断言——"调了再丢弃"
+>   仍然把提示词交给了插件，不算通过）。
+> - 写 hook 顺序：`manifest.order` 升序 → 同 order 按插件 id 字典序（可复现）。
+> - 失败隔离：`applyPromptHooks` 的 `failed` **按 hook 计**（一个坏 hook 只记一次），per-call 明细在
+>   `stats()`；hook 抛错不影响其余 hook，也不影响这一轮的装配。
+> - 计时走可注入的 `now()`，测试不 sleep。
+>
+> 诚实边界（设计稿要求进界面文案）：进程内＝全权限，能力声明是**约定不是沙箱**。二期动态加载必须先有
+> 授权界面，否则就是给用户虚假安全感。
+>
+> 自研项，原项目 front-porch-AI 无此机制；其铁律 **"All engines run in-process. No Python, no Rust,
+> no sidecars"**（`AGENTS.md`→`CLAUDE.md`）本设计照守——插件同样跑在进程内。落笔依据：本仓现码实测（行号见下）。
 
 ## 一、问题
 
