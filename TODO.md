@@ -469,6 +469,8 @@ play."
       matching a character's `likes` gives a small warmth modifier.
 - [ ] Backlog drawer styled as a translucent VN log with per-speaker colors, not the plain
       `bg-bg/95` panel. `src/components/chat/VNStage.tsx` (`showLog` block), `MessageLog.tsx`.
+      **✅ 已落（2026-09-14, `c830413`+`645f037`）**：per-speaker 色条**早已实现**（`MessageLog.tintSpeakers`
+      ✓ 且 `VNStage:1012` 已在传 ✓）→ 只缺半透明 → 抽屉改 `bg-bg/80 backdrop-blur-sm` ✓（并去掉重复类 ✓）。
 - [ ] Expression-set generation from one reference image already exists (#125) — surface it more
       prominently in the empty VN state, alongside `vnArtHint`.
       **落刀点（2026-09-14 侦察核定）**：① `src/lib/vn/artHint.ts:27` 的 `vnArtHint()` 是**纯函数** →
