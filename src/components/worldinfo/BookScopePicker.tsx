@@ -3,6 +3,7 @@ import { charactersApi, worldsApi } from '@/lib/api/client'
 import { isGlobalBook } from '@/lib/worldinfo/scope'
 import { Chip } from '@/components/ui/Chip'
 import type { WorldInfoBook } from '@/lib/types'
+import { t } from '@/lib/i18n'
 
 export type BookScope = Pick<WorldInfoBook, 'boundChatIds' | 'boundCharacterIds' | 'boundWorldIds'>
 
@@ -33,30 +34,30 @@ export function BookScopePicker({
   return (
     <div>
       <div className="mb-1 flex items-center justify-between">
-        <span className="text-xs font-medium text-text-muted">Available in</span>
+        <span className="text-xs font-medium text-text-muted">{t('Available in')}</span>
         {scoped && (
           <button
             type="button"
             onClick={() => onChange({ boundChatIds: [], boundCharacterIds: [], boundWorldIds: [] })}
             className="text-[11px] text-accent hover:underline"
           >
-            Make global
+            {t('Make global')}
           </button>
         )}
       </div>
       <p className="mb-3 text-[11px] text-text-muted">
         {scoped
-          ? 'Only chats whose character (or that character’s world) is selected below.'
-          : 'Every chat. Select a character or world below to limit it.'}
+          ? t('Only chats whose character (or that character’s world) is selected below.')
+          : t('Every chat. Select a character or world below to limit it.')}
       </p>
 
       {worlds.length > 0 && (
         <div className="mb-3">
-          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Worlds</div>
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">{t('Worlds')}</div>
           <div className="flex flex-wrap gap-1.5">
             {worlds.map((w) => (
               <Chip key={w.id} on={worldIds.includes(w.id)} onClick={() => toggle('boundWorldIds', w.id)}>
-                {w.name || 'Untitled world'}
+                {w.name || t('Untitled world')}
               </Chip>
             ))}
           </div>
@@ -64,14 +65,14 @@ export function BookScopePicker({
       )}
 
       <div>
-        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">Characters</div>
+        <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-text-muted">{t('Characters')}</div>
         {characters.length === 0 ? (
-          <p className="text-[11px] text-text-muted">No characters yet.</p>
+          <p className="text-[11px] text-text-muted">{t('No characters yet.')}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {characters.map((c) => (
               <Chip key={c.id} on={charIds.includes(c.id)} onClick={() => toggle('boundCharacterIds', c.id)}>
-                {c.card.name || 'Unnamed'}
+                {c.card.name || t('Unnamed')}
               </Chip>
             ))}
           </div>

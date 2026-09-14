@@ -18,12 +18,12 @@ function scopeSummary(
   book: WorldInfoBook,
   names: { characters: Map<string, string>; worlds: Map<string, string> },
 ): string {
-  if (isGlobalBook(book)) return 'Every chat'
+  if (isGlobalBook(book)) return t('Every chat')
   const labels = [
-    ...(book.boundWorldIds ?? []).map((id) => names.worlds.get(id) ?? 'a world'),
-    ...(book.boundCharacterIds ?? []).map((id) => names.characters.get(id) ?? 'a character'),
+    ...(book.boundWorldIds ?? []).map((id) => names.worlds.get(id) ?? t('a world')),
+    ...(book.boundCharacterIds ?? []).map((id) => names.characters.get(id) ?? t('a character')),
   ]
-  if (labels.length === 0) return 'Every chat'
+  if (labels.length === 0) return t('Every chat')
   if (labels.length <= 2) return labels.join(', ')
   return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`
 }
@@ -61,9 +61,9 @@ export function WorldInfoView() {
   const removeBook = async (id: string) => {
     const book = books.find((b) => b.id === id)
     const ok = await confirmDialog({
-      title: `Delete "${book?.book.name || 'this book'}"?`,
-      body: 'Its entries are removed from every chat they were active in. This cannot be undone.',
-      confirmLabel: 'Delete book',
+      title: `${t('Delete')} "${book?.book.name || t('this book')}"?`,
+      body: t('Its entries are removed from every chat they were active in. This cannot be undone.'),
+      confirmLabel: t('Delete book'),
       tone: 'danger',
     })
     if (!ok) return
@@ -79,14 +79,14 @@ export function WorldInfoView() {
           All books
         </Button>
 
-        <Section title="Scope" description={t("Where this book's entries are eligible to activate.")} className="mb-8">
+        <Section title={t('Scope')} description={t("Where this book's entries are eligible to activate.")} className="mb-8">
           <BookScopePicker
             scope={active}
             onChange={(patch) => worldInfoBooksApi.update(active.id, patch)}
           />
         </Section>
 
-        <Section title="Entries" surface="bare">
+        <Section title={t('Entries')} surface="bare">
           <LorebookEditor
             book={active.book}
             onChange={(book) => worldInfoBooksApi.update(active.id, { book, name: book.name || active.name })}
@@ -98,11 +98,11 @@ export function WorldInfoView() {
 
   return (
     <ViewShell
-      title="World Info"
-      description="Standalone lorebooks. Locations, factions, history, world rules. A book with no scope is available to every chat; scope it to a character or world to keep unrelated lore out. Lore that belongs to one character lives on the character card instead."
+      title={t('World Info')}
+      description={t('Standalone lorebooks. Locations, factions, history, world rules. A book with no scope is available to every chat; scope it to a character or world to keep unrelated lore out. Lore that belongs to one character lives on the character card instead.')}
       actions={
         <Button variant="primary" onClick={createBook}>
-          New book
+          {t('New book')}
         </Button>
       }
     >
@@ -113,9 +113,9 @@ export function WorldInfoView() {
             className="group flex items-center justify-between rounded-xl border border-border bg-bg-elevated px-5 py-4 transition-colors hover:border-accent/40"
           >
             <button className="min-w-0 flex-1 text-left" onClick={() => setActiveId(b.id)}>
-              <div className="truncate text-sm font-medium text-text">{b.book.name || 'Untitled'}</div>
+              <div className="truncate text-sm font-medium text-text">{b.book.name || t('Untitled')}</div>
               <div className="mt-0.5 flex items-center gap-2 text-xs text-text-muted">
-                <span>{b.book.entries.length} {b.book.entries.length === 1 ? 'entry' : 'entries'}</span>
+                <span>{b.book.entries.length} {t('entries')}</span>
                 <span className="text-border">·</span>
                 <span className={isGlobalBook(b) ? '' : 'text-accent'}>{scopeSummary(b, names)}</span>
               </div>

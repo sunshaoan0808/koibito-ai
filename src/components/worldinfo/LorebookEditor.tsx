@@ -8,15 +8,16 @@ import { anyKeyIsRisky } from '@/lib/text/regexSafety'
 import { Button } from '@/components/ui/Button'
 import { Toggle } from '@/components/ui/Toggle'
 import { NumberField, SelectField, TextAreaField, TextField } from '@/components/ui/Field'
+import { t } from '@/lib/i18n'
 
 function nextId(entries: LorebookEntry[]): number {
   return entries.reduce((max, e) => Math.max(max, e.id ?? 0), 0) + 1
 }
 
 const ACTIVATION_MODES: { id: WorldInfoActivationMode; label: string }[] = [
-  { id: 'always', label: 'Always' },
-  { id: 'keyword', label: 'When relevant' },
-  { id: 'manual', label: 'Manual' },
+  { id: 'always', label: t('Always') },
+  { id: 'keyword', label: t('When relevant') },
+  { id: 'manual', label: t('Manual') },
 ]
 
 const BLANK_ENTRY = (id: number): LorebookEntry => ({
@@ -62,7 +63,7 @@ export function LorebookEditor({
     setSuggesting(true)
     try {
       const suggestions = await suggestLoreEntries(client, aiContext, book.entries)
-      if (suggestions.length === 0) throw new Error("The model didn't propose any usable entries. Try again.")
+      if (suggestions.length === 0) throw new Error(t("The model didn't propose any usable entries. Try again."))
       let nextBook = book
       for (const s of suggestions) {
         nextBook = {
@@ -81,9 +82,9 @@ export function LorebookEditor({
   return (
     <div>
       <div className="mb-5 grid grid-cols-1 gap-x-3 sm:grid-cols-[1fr_140px]">
-        <TextField label="Book name" value={book.name ?? ''} onChange={(e) => onChange({ ...book, name: e.target.value })} />
+        <TextField label={t('Book name')} value={book.name ?? ''} onChange={(e) => onChange({ ...book, name: e.target.value })} />
         <NumberField
-          label="Token budget"
+          label={t('Token budget')}
           value={book.token_budget ?? 512}
           onChange={(e) => onChange({ ...book, token_budget: Number(e.target.value) })}
         />
@@ -91,8 +92,8 @@ export function LorebookEditor({
           <Toggle
             checked={book.recursive_scanning ?? false}
             onChange={(v) => onChange({ ...book, recursive_scanning: v })}
-            label="Recursive scanning"
-            description="Activated entries are re-scanned for further keyword matches, so one entry can pull in another it mentions."
+            label={t('Recursive scanning')}
+            description={t('Activated entries are re-scanned for further keyword matches, so one entry can pull in another it mentions.')}
           />
         </div>
       </div>
@@ -106,8 +107,8 @@ export function LorebookEditor({
               <div className="flex items-start gap-2">
                 <div className="flex-1">
                   <TextField
-                    label="Keys"
-                    hint="Comma separated. Wrap one in /slashes/ for a regex."
+                    label={t('Keys')}
+                    hint={t('Comma separated. Wrap one in /slashes/ for a regex.')}
                     value={entry.keys.join(', ')}
                     onChange={(e) =>
                       updateEntry(entry.id!, { keys: e.target.value.split(',').map((k) => k.trim()).filter(Boolean) })
@@ -123,7 +124,7 @@ export function LorebookEditor({
                 <button
                   type="button"
                   onClick={() => removeEntry(entry.id!)}
-                  aria-label="Remove entry"
+                  aria-label={t('Remove entry')}
                   className="mt-6 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                 >
                   <X size={15} strokeWidth={2} />
@@ -131,7 +132,7 @@ export function LorebookEditor({
               </div>
 
               <TextAreaField
-                label="Content"
+                label={t('Content')}
                 rows={2}
                 value={entry.content}
                 onChange={(e) => updateEntry(entry.id!, { content: e.target.value })}
@@ -174,32 +175,32 @@ export function LorebookEditor({
                 <div className="mt-3 border-t border-border pt-3">
                   <div className="grid grid-cols-2 gap-x-3 sm:grid-cols-4">
                     <NumberField
-                      label="Order"
+                      label={t('Order')}
                       value={entry.insertion_order}
                       onChange={(e) => updateEntry(entry.id!, { insertion_order: Number(e.target.value) || 0 })}
                     />
                     <SelectField
-                      label="Position"
+                      label={t('Position')}
                       value={entry.position ?? 'before_char'}
                       onChange={(e) =>
                         updateEntry(entry.id!, { position: e.target.value as 'before_char' | 'after_char' | 'at_depth' })
                       }
                     >
-                      <option value="before_char">Before card</option>
-                      <option value="after_char">After card</option>
-                      <option value="at_depth">At depth</option>
+                      <option value="before_char">{t('Before card')}</option>
+                      <option value="after_char">{t('After card')}</option>
+                      <option value="at_depth">{t('At depth')}</option>
                     </SelectField>
                     {entry.position === 'at_depth' && (
                       <NumberField
-                        label="Depth"
+                        label={t('Depth')}
                         min={0}
-                        hint="Messages up from the latest"
+                        hint={t('Messages up from the latest')}
                         value={entry.depth ?? 2}
                         onChange={(e) => updateEntry(entry.id!, { depth: Math.max(0, Number(e.target.value) || 0) })}
                       />
                     )}
                     <NumberField
-                      label="Unlock warmth"
+                      label={t('Unlock warmth')}
                       min={0}
                       max={100}
                       value={Number((entry.extensions as Record<string, unknown> | undefined)?.affectionMin ?? 0)}
@@ -214,7 +215,7 @@ export function LorebookEditor({
                     />
                     {mode === 'keyword' && (
                       <NumberField
-                        label="Chance %"
+                        label={t('Chance %')}
                         min={0}
                         max={100}
                         value={entry.probability ?? 100}
@@ -224,16 +225,16 @@ export function LorebookEditor({
                       />
                     )}
                     <NumberField
-                      label="Delay"
+                      label={t('Delay')}
                       min={0}
-                      hint="Won't activate until the chat has this many messages."
+                      hint={t("Won't activate until the chat has this many messages.")}
                       value={entry.delay ?? ''}
                       onChange={(e) =>
                         updateEntry(entry.id!, {
                           delay: e.target.value === '' ? undefined : Math.max(0, Math.floor(Number(e.target.value)) || 0),
                         })
                       }
-                      placeholder="off"
+                      placeholder={t('off')}
                     />
                   </div>
 
@@ -241,21 +242,21 @@ export function LorebookEditor({
                     <>
                       <div className="grid grid-cols-2 gap-x-3">
                         <NumberField
-                          label="Sticky"
+                          label={t('Sticky')}
                           min={0}
-                          hint="Stays active this many turns after the keyword stops matching."
+                          hint={t('Stays active this many turns after the keyword stops matching.')}
                           value={entry.sticky ?? ''}
                           onChange={(e) =>
                             updateEntry(entry.id!, {
                               sticky: e.target.value === '' ? undefined : Math.max(0, Math.floor(Number(e.target.value)) || 0),
                             })
                           }
-                          placeholder="off"
+                          placeholder={t('off')}
                         />
                         <NumberField
-                          label="Cooldown"
+                          label={t('Cooldown')}
                           min={0}
-                          hint="Can't re-fire by keyword for this many turns after it deactivates."
+                          hint={t("Can't re-fire by keyword for this many turns after it deactivates.")}
                           value={entry.cooldown ?? ''}
                           onChange={(e) =>
                             updateEntry(entry.id!, {
@@ -263,29 +264,29 @@ export function LorebookEditor({
                                 e.target.value === '' ? undefined : Math.max(0, Math.floor(Number(e.target.value)) || 0),
                             })
                           }
-                          placeholder="off"
+                          placeholder={t('off')}
                         />
                       </div>
                       <div className="grid grid-cols-1 gap-x-3 sm:grid-cols-[1fr_120px]">
                         <TextField
-                          label="Inclusion group"
-                          hint="Entries sharing a group are mutually exclusive: only one fires."
+                          label={t('Inclusion group')}
+                          hint={t('Entries sharing a group are mutually exclusive: only one fires.')}
                           value={entry.group ?? ''}
                           onChange={(e) => updateEntry(entry.id!, { group: e.target.value || undefined })}
-                          placeholder="none"
+                          placeholder={t('none')}
                         />
                         {entry.group && (
                           <NumberField
-                            label="Weight"
+                            label={t('Weight')}
                             min={0}
-                            hint="Set on any member for a weighted random pick"
+                            hint={t('Set on any member for a weighted random pick')}
                             value={entry.groupWeight ?? ''}
                             onChange={(e) =>
                               updateEntry(entry.id!, {
                                 groupWeight: e.target.value === '' ? undefined : Math.max(0, Number(e.target.value) || 0),
                               })
                             }
-                            placeholder="order wins"
+                            placeholder={t('order wins')}
                           />
                         )}
                       </div>
@@ -310,8 +311,8 @@ export function LorebookEditor({
                       {entry.selective && (
                         <>
                           <TextField
-                            label="Secondary keys"
-                            hint="Comma separated. Any one is enough, alongside a primary key match."
+                            label={t('Secondary keys')}
+                            hint={t('Comma separated. Any one is enough, alongside a primary key match.')}
                             value={(entry.secondary_keys ?? []).join(', ')}
                             onChange={(e) =>
                               updateEntry(entry.id!, {

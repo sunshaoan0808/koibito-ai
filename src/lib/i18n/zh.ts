@@ -1,6 +1,73 @@
 // zh-CN dictionary: maps stock English UI strings to Chinese.
 // Add one entry per English string; t() falls back to the English input when missing.
 export const ZH: Record<string, string> = {
+  // World Info (book scope, editor, and the delete confirmation)
+  'Every chat': '所有聊天',
+  Entries: '条目',
+  'New book': '新建世界书',
+  'Standalone lorebooks. Locations, factions, history, world rules. A book with no scope is available to every chat; scope it to a character or world to keep unrelated lore out. Lore that belongs to one character lives on the character card instead.':
+    '独立的世界书：地点、势力、历史、世界规则。没有限定范围的世界书对所有聊天生效；限定到某个角色或世界，就能把无关的背景挡在外面。只属于一个角色的背景，写在角色卡上更合适。',
+  'a world': '某个世界',
+  'a character': '某个角色',
+  "Where this book's entries are eligible to activate.": '这本书的条目在什么范围内可以激活。',
+  Scope: '适用范围',
+  Untitled: '未命名',
+  entries: '条',
+  'this book': '这本书',
+  'Its entries are removed from every chat they were active in. This cannot be undone.':
+    '它的条目会从所有曾激活它的聊天里移除。此操作无法撤销。',
+  'Delete book': '删除世界书',
+  'Available in': '在哪些地方生效',
+  'Make global': '改为全局',
+  'Only chats whose character (or that character’s world) is selected below.':
+    '仅限下方选中的角色（或该角色所属世界）的聊天。',
+  'Every chat. Select a character or world below to limit it.':
+    '所有聊天。在下面选一个角色或世界可以缩小范围。',
+  'Untitled world': '未命名世界',
+  Unnamed: '未命名',
+  'No characters yet.': '还没有角色。',
+  Always: '总是',
+  'When relevant': '相关时',
+  Manual: '手动',
+  'Before card': '角色卡之前',
+  'After card': '角色卡之后',
+  'At depth': '按深度插入',
+  'Suggest with AI': '让 AI 建议',
+  "The model didn't propose any usable entries. Try again.": '模型没有给出可用的条目，再试一次。',
+  off: '关',
+  none: '无',
+  'order wins': '按顺序优先',
+
+  // World Info editor fields
+  'Book name': '世界书名称',
+  'Token budget': 'Token 预算',
+  'Recursive scanning': '递归扫描',
+  'Activated entries are re-scanned for further keyword matches, so one entry can pull in another it mentions.':
+    '已激活的条目会被再扫一遍，所以一个条目能带出它提到的另一个。',
+  'Comma separated. Wrap one in /slashes/ for a regex.': '用逗号分隔；用 /斜杠/ 包住一个表示正则。',
+  'Remove entry': '删除条目',
+  'Messages up from the latest': '从最新一条往上数的消息数',
+  'Unlock warmth': '解锁热度',
+  'Chance %': '触发概率 %',
+  "Won't activate until the chat has this many messages.": '聊天消息数不到这个值就不会激活。',
+  'Stays active this many turns after the keyword stops matching.': '关键词不再匹配后仍保持激活的回合数。',
+  "Can't re-fire by keyword for this many turns after it deactivates.": '失效后这么多回合内不会因关键词再次触发。',
+  'Inclusion group': '互斥组',
+  'Entries sharing a group are mutually exclusive: only one fires.': '同一组的条目互斥，只会触发一个。',
+  'Group weight': '组内权重',
+  Keys: '关键词',
+  Content: '内容',
+  Order: '顺序',
+  Position: '位置',
+  Depth: '深度',
+  'Delay': '延迟',
+  Weight: '权重',
+  'Set on any member for a weighted random pick': '在组内任一成员上设置，即按权重随机挑选',
+  'Secondary keys': '次要关键词',
+  'Comma separated. Any one is enough, alongside a primary key match.': '用逗号分隔。匹配其中一个即可，配合一个主关键词。',
+  Sticky: '粘性',
+  Cooldown: '冷却',
+
   // Knowledge fog (who knows what; see docs/design/knowledge-fog.md)
   'Who knows': '谁知道',
   'One row per thing that happened, with everyone who was there and everyone who was told. A claim is a fact about the world rather than about one conversation, so the same event reaching several chats is merged here rather than repeated.':
