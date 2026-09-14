@@ -413,8 +413,21 @@ play."
 - [ ] **Shared `<InheritableField>`** — a wrapper showing "inherited from World · override" for the
       values that cascade (intimacy: global/world; instruct template: global/character; VN + assists:
       global/world-template/chat) instead of explaining precedence only in hint prose.
+      ⏳ 2026-09-14 recon: each cascade is already resolved inline at its call site (e.g.
+      `ChatWindow.tsx:447` — `chat?.assistOverrides?.visualNovelMode ?? globalVisualNovelMode`), so
+      it's not a data-model job: build one pure resolver per cascade returning `{ value, source }`
+      with source ∈ global/world/template/chat, unit-test that, then a presentational wrapper that
+      reads it. No store changes needed.
 - [ ] **More cross-links** — mode chip → world template picker; locked VN background → world Scenes
       tab; "relationship tracking is off" state → the toggle; CharacterEditor VN tab → world Scenes.
+      ⏳ 2026-09-14 recon: this is a **navigation-plumbing** job, not four one-liners. There is no UI
+      store — `view` is `useState<ViewId>` in `App.tsx:79`, handed down as `onNavigate` (→
+      `ChatSurface`) / `onNavigateView`, plus `navigateToWorld`. `SettingsView`'s tab is **local
+      state**, so "→ the toggle" needs a new initial-tab prop plumbed App→SettingsView (and ideally
+      a highlight, or the user lands at the top of a 8-card page). World sub-tab targets
+      (Scenes/Overview) need a third piece of nav state beside `navigateToWorld`: target world +
+      target tab. Do it as **one** shared navigation parameter object first, then the four
+      affordances become small — otherwise each one grows its own bespoke prop chain.
 
 ---
 
