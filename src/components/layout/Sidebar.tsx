@@ -14,11 +14,12 @@ import {
   Sparkles,
   Users,
   type LucideIcon,
+  Puzzle,
 } from 'lucide-react'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { t } from '@/lib/i18n'
 
-export type ViewId = 'chat' | 'branches' | 'save-slots' | 'town-feed' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings'
+export type ViewId = 'chat' | 'branches' | 'save-slots' | 'town-feed' | 'assistant' | 'characters' | 'worlds' | 'personas' | 'worldinfo' | 'gallery' | 'settings' | 'plugins'
 
 export const NAV: { id: ViewId; label: string; icon: LucideIcon }[] = [
   { id: 'chat', label: t('Chat'), icon: MessageCircle },
@@ -32,6 +33,7 @@ export const NAV: { id: ViewId; label: string; icon: LucideIcon }[] = [
   { id: 'worldinfo', label: t('World Info'), icon: BookOpen },
   { id: 'gallery', label: t('Gallery'), icon: GalleryHorizontalEnd },
   { id: 'settings', label: t('Settings'), icon: SettingsIcon },
+  { id: 'plugins', label: t('Plugins'), icon: Puzzle },
 ]
 
 export function Sidebar({

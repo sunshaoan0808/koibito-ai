@@ -8,6 +8,11 @@ import '@fontsource-variable/inter/standard.css'
 import '@fontsource/zen-maru-gothic/500.css'
 import '@fontsource/zen-maru-gothic/700.css'
 import './styles/globals.css'
+import { registerBuiltInPlugins } from './lib/plugins'
+
+// The registry is populated once, before the first prompt can be built: registration is what makes
+// a plugin exist, and grants replay from storage on every boot.
+registerBuiltInPlugins()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -1,6 +1,19 @@
 # 设计稿 · 插件 / 扩展 API（Plugin API）
 
-> 状态：**一/二期已落地**（`src/lib/plugins/{types,registry}.ts` ＋ `registry.test.ts` 7 用例 ＋ `integration.test.ts` 8 用例）；三期（视图 ＋ 面板）未做。
+> 状态：**一/二/三期全部落地**（`src/lib/plugins/`：`types` / `registry` / `grants` / `example` / `index` ＋ 21 用例；面板 `components/settings/PluginPanelView.tsx`）。
+>
+> 三期实现说明（"能不能看见、能不能点"）：
+> - **面板**（侧栏「插件」）：每个插件的名称/版本/能力 chips ＋ 每个可授权能力的开关 ＋ hook 耗时表
+>   （`stats()`：调用 / 失败 / 耗时）。注册表早就能否决，但在此之前没有任何界面能操作它。
+> - **授权持久化** `lib/plugins/grants.ts`：localStorage `rp.pluginGrants`（与 `rp.*` 同族），
+>   启动时由 `registerBuiltInPlugins()` 回放——这是"启停状态刷新后保持"的唯一手段。读坏数据退化为
+>   `{}`，写失败静默：偏好设置不该让应用起不来。
+> - **示例插件** `harbour-tides`：仓内注册（`lib/plugins/index.ts` 是唯一注册点），默认**未授权**，
+>   因此带它上线与不带它在提示词上逐字节相同。
+> - **面板说真话**：横幅明写"插件跑在同一进程，能力是意图声明不是沙箱"（稿子要求进界面文案——
+>   虚假的安全感比没有更糟）。
+>
+> 分期与验收对照：1 ✓（拒绝式校验有断言）2 ✓（逐字节基线）3 ✓（视图渲染 ＋ 授权持久化 ＋ 耗时）。
 >
 > 二期实现说明（接入点只有两个，引擎与 Composer 都不认识任何具体插件）：
 > - `buildPrompt`：七个 section 成文后、拼装前跑一次写入 hook；`input.plugins` **可注入**，默认全局单例。可注入是刻意的——测试传空注册表，输出必须与基线**逐字节相同**

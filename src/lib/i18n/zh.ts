@@ -1,6 +1,29 @@
 // zh-CN dictionary: maps stock English UI strings to Chinese.
 // Add one entry per English string; t() falls back to the English input when missing.
 export const ZH: Record<string, string> = {
+  // Plugins (user-contributed extensions; see docs/design/plugin-api.md)
+  Plugins: '插件',
+  'Extend the engine without editing it — prompt sections, slash commands, views.':
+    '不改引擎就能扩展它——提示词段落、斜杠命令、视图。',
+  'Plugins run in this same process. A capability is a statement of intent, not a sandbox — granting one hands the plugin everything this app can do.':
+    '插件跑在同一个进程里。能力声明是意图声明，不是沙箱——授权等于把这个应用能做的一切都交出去。',
+  'No plugins registered': '还没有注册插件',
+  'Add one to src/lib/plugins/index.ts — that file is the only registration point.':
+    '往 src/lib/plugins/index.ts 里加一个——那个文件是唯一的注册点。',
+  'Hook timings': '挂载点耗时',
+  'This session only — a plugin that throws never reaches the prompt.':
+    '只统计本次会话——抛错的插件进不了提示词。',
+  'No hook has run yet.': '还没有挂载点跑过。',
+  Plugin: '插件',
+  Hook: '挂载点',
+  Calls: '调用',
+  Failures: '失败',
+  Time: '耗时',
+  'Edit prompt sections': '改提示词段落',
+  'Make network requests': '发起网络请求',
+  'Granted — this plugin is active for the next turn.': '已授权——下一个回合起生效。',
+  'Not granted — the plugin is registered but does nothing.': '未授权——插件已注册但什么都不做。',
+
   // Town feed (world/off-screen news)
   'Town feed': '镇上消息',
   'Catch up': '结算',

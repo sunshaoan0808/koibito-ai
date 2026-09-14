@@ -15,6 +15,7 @@ import { GalleryView } from '@/components/gallery/GalleryView'
 import { BranchTreeView } from '@/components/chat/BranchTreeView'
 import { SaveSlotsView } from '@/components/chat/SaveSlotsView'
 import { TownFeedView } from '@/components/world/TownFeedView'
+import { PluginPanelView } from '@/components/settings/PluginPanelView'
 import { SettingsView } from '@/components/settings/SettingsView'
 import { ToastViewport } from '@/components/ui/ToastViewport'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -177,6 +178,7 @@ export default function App() {
           />
         )}
         {view === 'settings' && <SettingsView />}
+        {view === 'plugins' && <PluginPanelView />}
       </div>
       {/* App-level so a world's music keeps playing across view switches. Mounted in every view:
           the one exclusion that used to exist was for a competing player in a view since removed. */}
