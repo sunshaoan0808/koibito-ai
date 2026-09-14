@@ -395,6 +395,8 @@ export const ZH: Record<string, string> = {
 
   // Settings tabs / eyebrows (the Generation split; eyebrows had no translation before 2026-09-14)
   'Roleplay': '角色扮演',
+  'Do': '动作',
+  'Say': '台词',
   'Scene & relationship': '场景与关系',
   'Authoring': '创作',
   'Power user': '高级设置',

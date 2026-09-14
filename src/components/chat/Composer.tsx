@@ -37,6 +37,14 @@ interface ComposerProps {
   fillHeight?: boolean
 }
 
+/** `*…*` is this app's action/narration markup — `messageText` renders it as `<em>` and the model
+ *  reads it that way. So "Do" is just a wrap on send: no prompt change, no new per-turn channel. */
+function wrapAction(text: string): string {
+  const body = text.trim()
+  if (!body || (body.startsWith('*') && body.endsWith('*'))) return text
+  return `*${body}*`
+}
+
 export function Composer({
   value,
   onChangeValue,
@@ -72,6 +80,9 @@ export function Composer({
   // compete with the sprite/dialogue box for the little vertical room a phone has, so they start
   // collapsed there. Desktop VN keeps them always visible, no toggle chrome at all.
   const [showIntentMobile, setShowIntentMobile] = useState(false)
+  // Do/Say mode. "Do" wraps what you send in `*…*` (see `wrapAction`); it resets after each send so
+  // a momentary toggle can't silently turn the next straight line of dialogue into an action.
+  const [actionMode, setActionMode] = useState(false)
   const textRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const vn = variant === 'vn'
@@ -129,8 +140,9 @@ export function Composer({
       if (canContinue) onContinue()
       return
     }
-    onSend(value, attachments)
+    onSend(actionMode ? wrapAction(value) : value, attachments)
     onChangeValue('')
+    setActionMode(false)
     setAttachments([])
     textRef.current?.focus()
   }
@@ -210,7 +222,14 @@ export function Composer({
         }
       >
         {composerError && <p className="mb-2 px-1.5 text-xs text-danger">{composerError}</p>}
-        {intentSlot && !vn && (
+        <div className="mb-1.5 flex items-center gap-1 px-1.5 text-[11px]">
+        {[false, true].map((isDo) => (
+          <button key={String(isDo)} type="button" onClick={() => setActionMode(isDo)} className={isDo === actionMode ? 'rounded-full bg-accent/15 px-2 py-0.5 text-accent' : 'rounded-full px-2 py-0.5 text-text-muted hover:text-text'}>
+            {isDo ? t('Do') : t('Say')}
+          </button>
+        ))}
+      </div>
+      {intentSlot && !vn && (
           <div className="mb-2.5 border-b border-border/50 px-1.5 pb-2.5">{intentSlot}</div>
         )}
         {intentSlot && vn && (
