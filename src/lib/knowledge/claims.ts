@@ -215,6 +215,45 @@ export function pruneClaims(
   return kept.sort((a, b) => claimCell(b) - claimCell(a)).slice(0, Math.max(0, opts.limit))
 }
 
+/**
+ * Move knowledge along the social graph.
+ *
+ * A witness tells whoever the graph reaches — but only in the **same world-clock cell** as the
+ * claim itself. That condition is why this is a separate function: `toldTargets` answers "who is
+ * reachable", the clock answers "has there been a chance to talk yet". Without the clock, every
+ * claim would reach the whole graph the instant it was recorded.
+ *
+ * Monotone and idempotent: running it twice changes nothing. Knowledge never un-tells.
+ */
+export function propagateClaims(params: {
+  claims: KnowledgeClaim[]
+  characters: KnowledgeCharacterLike[]
+  at: ClaimAt
+}): KnowledgeClaim[] {
+  const here = claimCellAt(params.at)
+  return params.claims.map((claim) => {
+    if (claimCell(claim) !== here) return claim
+    const targets = toldTargets(claim, params.characters)
+    return targets.length === 0 ? claim : withTold(claim, targets)
+  })
+}
+
+/**
+ * Merge claim lists by id.
+ *
+ * The same claim ends up in more than one chat — the witness's own, and every character who was
+ * told — so the merge unions `toldIds` rather than letting the last writer win. Propagation has to
+ * be additive, or telling one person would silently erase another.
+ */
+export function mergeClaims(...lists: KnowledgeClaim[][]): KnowledgeClaim[] {
+  const byId = new Map<string, KnowledgeClaim>()
+  for (const claim of lists.flat()) {
+    const seen = byId.get(claim.id)
+    byId.set(claim.id, seen ? withTold(seen, claim.toldIds) : claim)
+  }
+  return [...byId.values()]
+}
+
 function claimCell(claim: KnowledgeClaim): number {
   return claimCellAt(claim.at)
 }

@@ -3,6 +3,8 @@ import {
   claimVisibleTo,
   claimsFromFacts,
   knowledgeLorebookFor,
+  mergeClaims,
+  propagateClaims,
   pruneClaims,
   sourceFor,
   toldTargets,
@@ -85,6 +87,52 @@ describe('claimsFromFacts + knowledgeLorebookFor (phase 2: the prompt gate)', ()
 })
 
 const mira: KnowledgeCharacterLike = { id: 'mira', name: 'Mira', connections: [{ name: 'Tomas', relation: 'friend' }] }
+
+describe('propagateClaims + mergeClaims (phase 3: knowledge travels)', () => {
+  // Self-contained cast — this block sits above the file's shared fixtures, so it brings its own.
+  const witness: KnowledgeCharacterLike = { id: 'mira', name: 'Mira', connections: [{ name: 'Tomas', relation: 'friend' }] }
+  const neighbour: KnowledgeCharacterLike = { id: 'tomas', name: 'Tomas', connections: [{ name: 'Mira', relation: 'friend' }] }
+  const stranger: KnowledgeCharacterLike = { id: 'daniel', name: 'Daniel' }
+  const at = { day: 7, phaseIndex: 0 }
+  const claims = claimsFromFacts({
+    facts: [{ id: 'f9', text: 'Mira took the wetlands survey.' }],
+    witnesses: ['mira'],
+    at,
+    scope: { worldId: 'w1', chatId: 'chat-a' },
+  })
+  const cast = [witness, neighbour, stranger]
+
+  it('tells the neighbours, but only in the cell the claim was made', () => {
+    const sameCell = propagateClaims({ claims, characters: cast, at })
+    expect(sameCell[0].toldIds).toEqual(['tomas'])
+    const laterCell = propagateClaims({ claims, characters: cast, at: { day: 7, phaseIndex: 1 } })
+    expect(laterCell[0].toldIds).toEqual([])
+    const dayBefore = propagateClaims({ claims, characters: cast, at: { day: 6, phaseIndex: 3 } })
+    expect(dayBefore[0].toldIds).toEqual([])
+  })
+
+  it('is idempotent and never un-tells', () => {
+    const once = propagateClaims({ claims, characters: cast, at })
+    expect(propagateClaims({ claims: once, characters: cast, at })).toEqual(once)
+  })
+
+  it('merges by id, unioning who was told instead of letting a writer win', () => {
+    const merged = mergeClaims([claims[0]], [withTold(claims[0], ['tomas'])], [withTold(claims[0], ['daniel'])])
+    expect(merged).toHaveLength(1)
+    expect(merged[0].toldIds).toEqual(['daniel', 'tomas'])
+  })
+
+  // The end-to-end acceptance: knowledge that crossed a chat boundary turns up in the listener's block.
+  it('puts what was told into the listener prompt block — and leaves everyone else empty', () => {
+    const travelled = propagateClaims({ claims, characters: cast, at })
+    const tomasCopy = travelled.filter((claim) => claimVisibleTo(claim, 'tomas'))
+    expect(
+      knowledgeLorebookFor({ claims: tomasCopy, characterId: 'tomas' })[0].entries.map((e) => e.content),
+    ).toEqual(['Mira took the wetlands survey.'])
+    // Daniel is on nobody's edge from Mira, so he heard nothing at all.
+    expect(travelled.filter((claim) => claimVisibleTo(claim, 'daniel'))).toEqual([])
+  })
+})
 const tomas: KnowledgeCharacterLike = { id: 'tomas', name: 'Tomas', connections: [{ name: 'Mira', relation: 'friend' }] }
 const daniel: KnowledgeCharacterLike = { id: 'daniel', name: 'Daniel' }
 /** Present in the graph by name only — nobody registered them, so nobody is that character yet. */

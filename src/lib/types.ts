@@ -411,6 +411,10 @@ export interface Chat {
   sceneFlags?: SceneFlag[]
   /** Per-lorebook-entry sticky/cooldown bookkeeping, keyed `${book.sourceKey}:${entry.id}`. Unset = fresh. */
   worldInfoState?: Record<string, { activeUntil?: number; blockedUntil?: number; activeAt?: number }>
+  /** Claims this chat's character holds — its own witnessed facts plus anything it was told.
+   *  Written by the settlement pass (`world/TownFeedView`), read by the prompt gate. Optional and
+   *  additive: a chat without it behaves exactly as before the field existed. */
+  knowledgeClaims?: import('@/lib/knowledge/claims').KnowledgeClaim[]
   /** The off-screen town feed for this chat's world — see `world/townFeed.ts` and
    *  `docs/design/town-feed.md`. World-level generation, chat-level storage: a chat row is the only
    *  home phase 1 can give it without a schema migration (`server/db.ts` keeps everything but the

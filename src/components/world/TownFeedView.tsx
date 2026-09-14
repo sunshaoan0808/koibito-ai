@@ -6,7 +6,8 @@ import { charactersApi, chatsApi, worldsApi } from '@/lib/api/client'
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
 import { t } from '@/lib/i18n'
 import { errorMessage, toastError, toastSuccess } from '@/lib/store/useToastStore'
-import { mergeFeedEntries, planSettlement, type FeedEntry, type FeedCharacterLike, type FeedKind } from '@/lib/world/townFeed'
+import { claimVisibleTo, mergeClaims, propagateClaims } from '@/lib/knowledge/claims'
+import { mergeFeedEntries, planSettlement, type FeedCharacterLike, type FeedEntry, type FeedKind } from '@/lib/world/townFeed'
 import type { Chat } from '@/lib/types'
 
 /**
@@ -69,6 +70,19 @@ export function TownFeedView({
             townFeedSettledAt: plan.settledAt,
           })
           added += plan.entries.length
+        }
+        // Knowledge travels on the same settlement — a witness tells whoever the graph reaches, and
+        // every chat ends up holding a copy of what its own character knows. Only done for the world
+        // clock's current cell, and monotone, so running it twice is harmless.
+        const travelling = propagateClaims({
+          claims: inWorld.flatMap((chat) => chat.knowledgeClaims ?? []),
+          characters: roster,
+          at: now,
+        })
+        for (const chat of inWorld) {
+          const mine = travelling.filter((claim) => claimVisibleTo(claim, chat.characterId ?? ''))
+          if (mine.length === 0) continue
+          await chatsApi.update(chat.id, { knowledgeClaims: mergeClaims(chat.knowledgeClaims ?? [], mine) })
         }
       }
       toastSuccess(added > 0 ? t('Town feed caught up') : t('Nothing new to catch up on'))

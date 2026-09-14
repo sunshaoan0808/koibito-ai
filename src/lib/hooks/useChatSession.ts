@@ -248,7 +248,7 @@ import {
 import { assessRapport } from '@/lib/dating/rapport'
 import { bookAppliesToChat } from '@/lib/worldinfo/scope'
 import { buildFactsLorebook, dedupeFacts, factContent } from '@/lib/worldinfo/facts'
-import { claimsFromFacts, knowledgeLorebookFor } from '@/lib/knowledge/claims'
+import { claimsFromFacts, knowledgeLorebookFor, mergeClaims } from '@/lib/knowledge/claims'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { errorMessage, toastError, toastInfo, toastSuccess } from '@/lib/store/useToastStore'
 import { playSendBlip } from '@/lib/audio/sfx'
@@ -638,12 +638,16 @@ export function useChatSession(chatId: string | null) {
       // `lib/knowledge/claims.ts` and `docs/design/knowledge-fog.md`.
       const presentIds = [speaker.id, ...roster.map((c) => c.id)]
       const knowledgeLorebook = knowledgeLorebookFor({
-        claims: claimsFromFacts({
-          facts: activeFacts.map((f) => ({ id: f.id, text: factContent(f) })),
-          witnesses: presentIds,
-          at: { day: world?.currentDay ?? 0, phaseIndex: world?.currentPhaseIndex ?? 0 },
-          scope: { worldId: character.worldId, chatId: freshChat.id },
-        }),
+        claims: mergeClaims(
+          // What this character was told while elsewhere — the only claims that can cross chats.
+          freshChat.knowledgeClaims ?? [],
+          claimsFromFacts({
+            facts: activeFacts.map((f) => ({ id: f.id, text: factContent(f) })),
+            witnesses: presentIds,
+            at: { day: world?.currentDay ?? 0, phaseIndex: world?.currentPhaseIndex ?? 0 },
+            scope: { worldId: character.worldId, chatId: freshChat.id },
+          }),
+        ),
         characterId: character.id,
         // The facts book above already carries these, and the gate exists for knowledge that travels
         // — so it must not repeat what the prompt just said. Today that makes this block empty by

@@ -1,6 +1,12 @@
 # 设计稿 · 知识迷雾（Knowledge Fog）
 
-> 状态：**一/二期已落地**（`src/lib/knowledge/claims.ts` ＋ `claims.test.ts`，15 用例）；三期（编辑器维度＋去重协同）未做。
+> 状态：**一/二/三期已落地**（`src/lib/knowledge/claims.ts` ＋ `claims.test.ts`，20 用例）；**编辑器维度**未做。
+>
+> 三期为"知识真的能旅行"：`propagateClaims`（世界时钟格内沿社交图传播、幂等）＋ `mergeClaims`
+> （按 id 合并、`toldIds` 取并集，绝不因后写覆盖前写）＋ `Chat.knowledgeClaims`（零迁移）。写入侧
+> 挂在**结算**上（`TownFeedView` 的 `Catch up`：同一个按钮既结算镇上消息，也让传闻流动）；装配侧读
+> 本 chat 的 claims 再 `excludeFactIds` 掉自己的 facts → 块里**只剩听来的**。未做：`WorldInfoView`
+> 的"谁知道"维度（纯展示，不阻塞链路）。
 >
 > 二期的两点实现决定：**装配复用合成世界书形态**（`knowledgeLorebookFor` 产出与 `buildFactsLorebook`
 > 同形的 `Lorebook`），所以 `buildPrompt` 不用加新通道，接线点只有两处（`useChatSession.ts:633` 的
