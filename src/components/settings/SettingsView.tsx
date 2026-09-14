@@ -13,8 +13,8 @@ import { DataSettings } from './DataSettings'
 
 type Tab = 'connection' | 'appearance' | 'generation' | 'roleplay' | 'voice' | 'images' | 'data'
 
-export function SettingsView() {
-  const [tab, setTab] = useState<Tab>('connection')
+export function SettingsView({ initialTab }: { initialTab?: string | null }) {
+  const [tab, setTab] = useState<Tab>((initialTab as Tab) ?? 'connection')
   const [filter, setFilter] = useState('')
 
   const TABS: [Tab, string][] = [

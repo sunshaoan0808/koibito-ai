@@ -430,12 +430,12 @@ play."
       新建聊天时把模板烘进 `assistOverrides` 种子），不存在活的 template 层，故徽章不谎报第三层。
 - [ ] **More cross-links** — mode chip → world template picker; locked VN background → world Scenes
       tab; "relationship tracking is off" state → the toggle; CharacterEditor VN tab → world Scenes.
-      ✅ 2026-09-14 落地 2/4（① VNStage「缺场景图」提示 → 世界 Scenes 页；② CharacterEditor 的
-      Visual novel 页 —— 它对"已绑世界但无场景图"原本是沉默的 —— 同样直达 Scenes，管线
+      ✅ 2026-09-14 落地 3/4 —— ③ "追踪已关闭"提示 → Roleplay 开关（真机验证：翻转测试浏览器
+      localStorage 后提示出现，点击落在 设置/角色扮演 页）；①② 见下（VNStage 缺场景图提示 + CharacterEditor 的
+      Visual novel 页 —— 它对"已绑世界但无场景图"原本是沉默的 —— 两者都直达对应世界的 Scenes，管线
       App→CharactersView→CharacterEditor，判定共享 `hasSceneBackgrounds()`）。上面的侦察结论**有一处错**：
       "世界子 tab 需要第三块导航状态" —— 实际 `App` 早有 `pendingWorldTab`、`WorldsView` 早有
-      `initialTab`，缺的只是把回调传给 VNStage。剩 2 项："追踪已关闭" → Roleplay 开关（确需新增 SettingsView `initialTab` 管线 + 一个目前
-      不存在的提示位）；mode chip → 模板选择器（**开什么不明确**，需先定产品语义）。
+      `initialTab`，缺的只是把回调传给 VNStage。剩 1 项：mode chip → 模板选择器（**开什么不明确**，需先定产品语义）。
       ⏳ 2026-09-14 recon: this is a **navigation-plumbing** job, not four one-liners. There is no UI
       store — `view` is `useState<ViewId>` in `App.tsx:79`, handed down as `onNavigate` (→
       `ChatSurface`) / `onNavigateView`, plus `navigateToWorld`. `SettingsView`'s tab is **local

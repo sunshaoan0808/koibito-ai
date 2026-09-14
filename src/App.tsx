@@ -35,7 +35,7 @@ function ChatSurface({
 }: {
   activeChatId: string | null
   onSelect: (id: string | null) => void
-  onNavigate: (view: ViewId) => void
+  onNavigate: (view: ViewId, tab?: string) => void
   onNavigateToWorld: (worldId: string, tab?: string) => void
 }) {
   const chats = useApiQuery('chats', () => chatsApi.list(), [])
@@ -64,7 +64,7 @@ function ChatSurface({
         <ChatWindow
           chatId={activeChatId}
           onBack={() => setMobileListOpen(true)}
-          onOpenSettings={() => onNavigate('settings')}
+          onOpenSettings={(tab) => onNavigate('settings', tab)}
           onNavigateToWorld={onNavigateToWorld}
         />
       </div>
@@ -86,6 +86,9 @@ export default function App() {
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(null)
   const [pendingWorldId, setPendingWorldId] = useState<string | null>(null)
   const [pendingWorldTab, setPendingWorldTab] = useState<string | null>(null)
+  // Set by any "open Settings at tab X" affordance and cleared the moment you navigate anywhere else,
+  // so the tab only applies to the visit that asked for it (same contract as pendingWorldTab).
+  const [pendingSettingsTab, setPendingSettingsTab] = useState<string | null>(null)
   // The Relationship panel's "Customize in World editor" link — same deep-link shape as the
   // command palette's `onSelectWorld` below, just also landing on a specific tab (e.g. 'dating'
   // for the gift/intimacy catalogs) instead of always the world's overview.
@@ -131,7 +134,7 @@ export default function App() {
           stress with tall-enough content to catch. */}
       <div className="flex min-h-0 flex-1 min-w-0 pb-14 md:pb-0">
         {view === 'chat' && (
-          <ChatSurface activeChatId={activeChatId} onSelect={setActiveChatId} onNavigate={setView} onNavigateToWorld={navigateToWorld} />
+          <ChatSurface activeChatId={activeChatId} onSelect={setActiveChatId} onNavigate={(view, tab) => { setPendingSettingsTab(view === 'settings' ? (tab ?? null) : null); setView(view) }} onNavigateToWorld={navigateToWorld} />
         )}
         {view === 'assistant' && <AssistantView />}
         {view === 'characters' && (
@@ -177,7 +180,7 @@ export default function App() {
             }}
           />
         )}
-        {view === 'settings' && <SettingsView />}
+        {view === 'settings' && <SettingsView initialTab={pendingSettingsTab} />}
         {view === 'plugins' && <PluginPanelView />}
       </div>
       {/* App-level so a world's music keeps playing across view switches. Mounted in every view:

@@ -102,7 +102,7 @@ export function ChatWindow({
   chatId: string | null
   onBack?: () => void
   /** Deep link from the Quick tuning panel's "Open full Generation settings" — optional so ChatWindow stays usable without a view-switcher in scope. */
-  onOpenSettings?: () => void
+  onOpenSettings?: (tab?: string) => void
   /** The Relationship panel's "Customize in World editor" link — optional for the same reason as `onOpenSettings`. */
   onNavigateToWorld?: (worldId: string, tab?: string) => void
 }) {
@@ -805,7 +805,13 @@ export function ChatWindow({
       intentSlot={
         showIntentChips ? (
           <IntentChips variant={variant} stats={intentStats} armed={armedIntent} onArm={setArmedIntent} />
-        ) : undefined
+        ) : (
+          !relationshipTrackingActive && onOpenSettings && (
+            <button type="button" onClick={() => onOpenSettings('roleplay')} className="text-accent hover:underline">
+              Turn tracking on in Settings → Roleplay
+            </button>
+          )
+        )
       }
     />
   )
