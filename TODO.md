@@ -319,7 +319,7 @@ play."
       record (cadence correctly bypassed, same as repetition already was).
       `src/lib/dating/gifts.ts`, `src/lib/hooks/useChatSession.ts`,
       `src/components/chat/RelationshipPanel.tsx` (Shop tab).
-- [ ] **Real-time cadence for proactive characters** (Mystic Messenger chatrooms). Outreach (#102)
+- [x] **Real-time cadence for proactive characters** (Mystic Messenger chatrooms). Outreach (#102)
       is wall-clock-silence-driven; extend it with schedule-tied "she's free now, she messaged you"
       windows and a missed-window concept, plus a firmer unread treatment (badge → a proper
       notification card in the chat list). `src/lib/dating/outreach.ts`,
@@ -354,13 +354,13 @@ play."
       couple of short questions on start and substitutes the answers into the opening. Mad-libs
       simple; turns "recreate the same opening for a new save" into picking a template. ROADMAP §15.
       Build on `starterTemplates.ts` + `WorldTemplateGallery.tsx` + `relationshipStarters`.
-- [ ] **Save slots / named state snapshots** distinct from chat history (Ren'Py save/load; ROADMAP
+- [x] **Save slots / named state snapshots** distinct from chat history (Ren'Py save/load; ROADMAP
       §12). A full-state snapshot (relationship, inventory, calendar, flags) a player returns to —
       VN players expect this and forking isn't the same mental model.
       `server/app.ts` (a snapshot table), a `SaveSlotsPanel`.
 - [ ] **Chat folders / tags** (SillyTavern; AI Dungeon "adventures"). ROADMAP §14 open; its own
       authoring surface, not a row-menu addition. `src/components/chat/ChatsPanel.tsx`, `types.ts`.
-- [ ] **Story-branch tree view** (ROADMAP §12). Forking works; there's no visualization of a chat's
+- [x] **Story-branch tree view** (ROADMAP §12). Forking works; there's no visualization of a chat's
       branch history. Closer to a save-tree browser than the flat list-with-badges.
 - [ ] **Combinatorial character creation** (AI Dungeon character creator; partly seeded by the
       trait-picker in commit `485fc67`). A third "New character" path: pick from small independent
@@ -371,7 +371,7 @@ play."
       `(text, state) => { text, state }` run after generation, sandboxed (Web Worker, no fetch/DOM),
       with a test panel. Regex scripts are already the stateless special case of this. ROADMAP §15 —
       big, needs a real sandbox answer; scope tightly.
-- [ ] **On-demand in-chat scene snapshot** (AI Dungeon "See"). A chat-level "snapshot this moment"
+- [x] **On-demand in-chat scene snapshot** (AI Dungeon "See"). A chat-level "snapshot this moment"
       that generates an image into the transcript (not a persistent slot), reusing the
       `ImageBackend` abstraction that already exists. ROADMAP §15.
 
