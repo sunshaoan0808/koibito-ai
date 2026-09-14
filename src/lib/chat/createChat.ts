@@ -1,4 +1,5 @@
 import { chatsApi, messagesApi } from '@/lib/api/client'
+import { fillTemplate } from './sceneSlots'
 import type { ChatBackend } from '@/lib/api/chatBackend'
 import type { Character } from '@/lib/characters/cardSpec'
 import { substituteMacros } from '@/lib/characters/macros'
@@ -37,6 +38,8 @@ export interface CreateChatOptions {
   summary?: string
   /** Index into `availableGreetings(character)` — defaults to the card's own opening line (index 0). Pass -1 to start with no opening message at all. */
   greetingIndex?: number
+  /** Optional mad-libs values for the opening line's `{{key}}` slots; unfilled slots stay literal. */
+  slotValues?: Record<string, string>
   /** Optional — when given, fires a best-effort `detectGreetingScene` pass so the static opening greeting gets an expression/background tag too (see that function's doc comment). Omit from a context with no client handy; the chat still works fine, VN mode just starts on a placeholder until the first real reply. */
   client?: ChatBackend
   /** The play-style chip picked in `NewChatDialog` — stored as `Chat.mode` (display only) and used
@@ -88,7 +91,7 @@ export async function createChat(opts: CreateChatOptions): Promise<Chat> {
   const greetings = availableGreetings(character)
   if (greetingIndex >= 0 && greetings.length > 0) {
     const macroCtx = { charName: character.card.name, userName: personaName || 'You' }
-    const rendered = greetings.map((g) => substituteMacros(g, macroCtx))
+    const rendered = greetings.map((g) => fillTemplate(substituteMacros(g, macroCtx), opts.slotValues ?? {}))
     const activeSwipe = Math.min(greetingIndex, rendered.length - 1)
     const greetingMessage = await messagesApi.create({
       chatId: chat.id,
