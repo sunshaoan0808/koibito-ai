@@ -645,6 +645,10 @@ export function useChatSession(chatId: string | null) {
           scope: { worldId: character.worldId, chatId: freshChat.id },
         }),
         characterId: character.id,
+        // The facts book above already carries these, and the gate exists for knowledge that travels
+        // — so it must not repeat what the prompt just said. Today that makes this block empty by
+        // design (facts are per-chat); it fills the moment knowledge crosses a chat boundary.
+        excludeFactIds: activeFacts.map((f) => f.id),
       }).map((b) => ({ ...b, sourceKey: 'knowledge' }))
       const affection = freshChat.affection ?? 0
       // One read of the char-reply count for the whole build — every turn-scoped window check below keys off it.

@@ -57,6 +57,16 @@ describe('claimsFromFacts + knowledgeLorebookFor (phase 2: the prompt gate)', ()
     expect(knowledgeLorebookFor({ claims: [told], characterId: 'daniel' })).toEqual([])
   })
 
+  it('never repeats what the facts book already carries', () => {
+    // A fact already in the prompt must not be said twice; the gate is for knowledge that travels.
+    expect(knowledgeLorebookFor({ claims, characterId: 'mira', excludeFactIds: ['f1'] })).toEqual([])
+    const told = withTold(claims[0], ['tomas'])
+    expect(
+      knowledgeLorebookFor({ claims: [told], characterId: 'tomas', excludeFactIds: ['someone-elses-fact'] })[0]
+        .entries,
+    ).toHaveLength(1)
+  })
+
   it('caps the block so it cannot eat the prompt', () => {
     const many = claimsFromFacts({
       facts: [1, 2, 3, 4, 5].map((n) => ({ id: `f${n}`, text: `Fact ${n}` })),

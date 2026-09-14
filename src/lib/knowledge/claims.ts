@@ -54,8 +54,17 @@ export function knowledgeLorebookFor(params: {
   claims: KnowledgeClaim[]
   characterId: string
   limit?: number
+  /**
+   * Facts the facts book already carries. Skipping them is what stops the gate from saying the same
+   * thing twice — the gate exists for knowledge that *travels* (another chat, another character),
+   * and without this it would double every fact it was handed.
+   */
+  excludeFactIds?: string[]
 }): Lorebook[] {
-  const visible = visibleClaims(params.claims, params.characterId, { limit: params.limit })
+  const excluded = new Set(params.excludeFactIds ?? [])
+  const visible = visibleClaims(params.claims, params.characterId, { limit: params.limit }).filter(
+    (claim) => !(claim.factId && excluded.has(claim.factId)),
+  )
   if (visible.length === 0) return []
   return [
     {
