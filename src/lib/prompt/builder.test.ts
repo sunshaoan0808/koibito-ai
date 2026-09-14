@@ -47,6 +47,16 @@ describe('buildPrompt — instruct template affixes', () => {
     expect(result.prompt.trimEnd().endsWith('<start_of_turn>model\nAria:')).toBe(true)
   })
 
+  // Guard for the Do/Say/Narrate work: a composer mode may only ever *add* to a user turn. With no
+  // mode set the turn must render exactly as it always has — if this fails, the hint leaked.
+  it('renders a user turn with no extra hint when no composer mode is set', async () => {
+    const result = await buildPrompt(
+      baseInput({ history: [{ id: '1', role: 'user', name: 'You', text: 'I knock twice.' }] }),
+    )
+    const userTurn = result.prompt.split('\n').find((line) => line.startsWith('You: '))
+    expect(userTurn).toBe('You: I knock twice.')
+  })
+
   it('plain-chat leaves the fixed block unwrapped (empty affixes)', async () => {
     const result = await buildPrompt(
       baseInput({ character: character({ name: 'Aria', description: 'DESC_MARKER' }) }),
