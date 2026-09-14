@@ -352,19 +352,11 @@ play."
       承诺"自包含可离线"（头像已内联为 data URL），故内联素材也必须 `urlToDataUrl` **内联** ——
       ✅ transcript 侧**已接**（②，`ccc7094`）：开头 `await resolveAssetMap()` 内联一次，
       `messageTextHtml` 保持 sync ✓；坏引用渲染名字 ✓。
-      而 **epub 的 async 边界在更上游**（2026-09-14 实测，行号已核准）：`downloadChatEpub(epub, filename)`
-      （`epub.ts:641`）是 **sync**、只收**已构建好的字节** ✗；`ChatWindow.tsx:392` 的 `exportEpub` 也是
-      **sync** ✗ → 需把它改成 `async` 并 `await resolveAssetMap(character?.assets)`（onclick 里安全 ✓）。
-      **完整落刀点（9 处，跨 2 文件）**：
-      ① `ChatEpubOptions`（`:367`）加 `assetMap?`；② `RenderContext`（`:388`）加 `assetMap?`；
-      ③ `buildChatEpubEntries` 里建 `ctx` 处（`regexScripts: opts.regexScripts,` @`:577`）加
-      `assetMap: opts.assetMap,`；④ `messageBodyXhtml`（`:287`）签名加第 4 参；
-      ⑤ 其文本分支（`:294` 的 `return inner`）改走 `inlineAssetsHtml`；⑥ 调用点 `:432` 传 `ctx.assetMap`；
-      ⑦⑧⑨ `ChatWindow.tsx:392` 改 async + await + 传入 + `import { resolveAssetMap }`。
-      ⚠️ **陷阱（本轮新挖，必踩）**：epub 的文本段现在靠
-      `escapeXml(...).replace(/\r\n|\r|\n/g, '<br/>')` 保留**换行** ✗ —— 而 `inlineAssetsHtml` 的 `escape`
-      是**注入**的 ✓，直接传 `escapeXml` 会让 epub **所有换行消失** ✗✗。必须传一个"既转义又把换行还原成
-      `<br/>`"的闭包 ✓（transcript 那边无此问题，因为它是 HTML ✓）。
+      ✅ **epub 侧已收官**（`bed11cc` + `57f9165`，2026-09-14）：`ChatEpubOptions`/`RenderContext` 加
+      `assetMap?`、`messageBodyXhtml` 加第 4 参并改走 `inlineAssetsHtml`、`ChatWindow` 的 `exportEpub`
+      改 async 并 `await resolveAssetMap(...)` 后传入 ✓。**落地时踩实的陷阱**：epub 的文本段靠
+      `escapeXml(...).replace(/\r\n|\r|\n/g,'<br/>')` 保留换行，而 `inlineAssetsHtml` 的 `escape` 是
+      注入的 → 必须传"既转义又还原 `<br/>`"的闭包，否则**全书换行消失** ✓（epub 既有 22 用例守住了这条 ✓）。
       - [ ] **Do / Say / Narrate input modes** (AI Dungeon). A composer mode chip that folds a light
       prefix hint into the turn — reduces ambiguity for a new user typing plain text. ROADMAP §15.
       `src/components/chat/Composer.tsx`, `src/lib/prompt/builder.ts` (`renderTurn`).
