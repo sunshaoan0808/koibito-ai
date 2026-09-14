@@ -1,6 +1,18 @@
 // zh-CN dictionary: maps stock English UI strings to Chinese.
 // Add one entry per English string; t() falls back to the English input when missing.
 export const ZH: Record<string, string> = {
+  // Knowledge fog (who knows what; see docs/design/knowledge-fog.md)
+  'Who knows': '谁知道',
+  'One row per thing that happened, with everyone who was there and everyone who was told. A claim is a fact about the world rather than about one conversation, so the same event reaching several chats is merged here rather than repeated.':
+    '每一条是"发生过的某件事"，附上在场的人与被告知的人。claim 是世界层面的事实、不属于某一次会话，所以同一件事抵达多个聊天时会在这里合并显示，而不是重复多遍。',
+  'Nothing has been witnessed yet': '还没有任何事被见证过',
+  'Claims appear here once a scene has been settled — that is when witnesses are recorded.':
+    '场景结算之后 claims 才会出现在这里——见证者是在结算时记录的。',
+  'Witnessed by': '见证',
+  Told: '被告知',
+  Day: '第',
+  'Showing the first 20 of': '只显示前 20 条，共',
+
   // Plugins (user-contributed extensions; see docs/design/plugin-api.md)
   Plugins: '插件',
   'Extend the engine without editing it — prompt sections, slash commands, views.':

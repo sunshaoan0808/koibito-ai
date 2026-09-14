@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
-import { charactersApi, worldInfoBooksApi, worldsApi } from '@/lib/api/client'
+import { charactersApi, chatsApi, worldInfoBooksApi, worldsApi } from '@/lib/api/client'
+import { mergeClaims } from '@/lib/knowledge/claims'
 import { isGlobalBook } from '@/lib/worldinfo/scope'
 import type { WorldInfoBook } from '@/lib/types'
 import { LorebookEditor } from './LorebookEditor'
@@ -31,6 +32,7 @@ export function WorldInfoView() {
   const books = useApiQuery('world-info-books', () => worldInfoBooksApi.list(), []) ?? []
   const characters = useApiQuery('characters', () => charactersApi.list(), []) ?? []
   const worlds = useApiQuery('worlds', () => worldsApi.list(), []) ?? []
+  const chats = useApiQuery('chats', () => chatsApi.list(), []) ?? []
   const [activeId, setActiveId] = useState<string | null>(null)
   const active = books.find((b) => b.id === activeId)
 
@@ -38,6 +40,12 @@ export function WorldInfoView() {
     characters: new Map(characters.map((c) => [c.id, c.card.name])),
     worlds: new Map(worlds.map((w) => [w.id, w.name])),
   }
+
+  // "谁知道"（`docs/design/knowledge-fog.md` 三期）。claims 是派生的、从不单独持久化：每条都搭在
+  // 某个 Chat 行上，这里用 `mergeClaims` 合并——一桩事是**世界**的事实，不是某次会话的，所以同一
+  // 件事抵达三个聊天必须只出现一次，且"被告知"取并集。
+  const claims = mergeClaims(...chats.map((chat) => chat.knowledgeClaims ?? []))
+  const nameOf = (id: string) => names.characters.get(id) ?? id
 
   const createBook = async () => {
     const created = await worldInfoBooksApi.create({
@@ -121,6 +129,48 @@ export function WorldInfoView() {
             </Button>
           </div>
         ))}
+        <Section
+          title={t('Who knows')}
+          description={t(
+            'One row per thing that happened, with everyone who was there and everyone who was told. A claim is a fact about the world rather than about one conversation, so the same event reaching several chats is merged here rather than repeated.',
+          )}
+        >
+          {claims.length === 0 ? (
+            <EmptyState>
+              <p className="text-sm">{t('Nothing has been witnessed yet')}</p>
+              <p className="pt-1 text-xs">
+                {t('Claims appear here once a scene has been settled — that is when witnesses are recorded.')}
+              </p>
+            </EmptyState>
+          ) : (
+            <ul className="space-y-2">
+              {claims.slice(0, 20).map((claim) => (
+                <li key={claim.id} className="rounded-lg border border-border bg-bg-elevated px-4 py-3">
+                  <p className="text-sm text-text">{claim.text}</p>
+                  <p className="pt-1 text-xs text-text-muted">
+                    <span className="text-accent">{t('Witnessed by')}</span>{' '}
+                    {claim.witnessedByIds.map(nameOf).join('、') || '—'}
+                    {claim.toldIds.length > 0 && (
+                      <>
+                        <span className="px-1 text-border">·</span>
+                        <span className="text-accent">{t('Told')}</span>{' '}
+                        {claim.toldIds.map(nameOf).join('、')}
+                      </>
+                    )}
+                    <span className="px-1 text-border">·</span>
+                    {t('Day')} {claim.at.day} · {claim.at.phaseIndex + 1}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+          {claims.length > 20 && (
+            <p className="pt-2 text-xs text-text-muted">
+              {t('Showing the first 20 of')} {claims.length}
+            </p>
+          )}
+        </Section>
+
         {books.length === 0 && (
           <EmptyState
             action={
