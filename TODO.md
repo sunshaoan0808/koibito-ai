@@ -482,6 +482,11 @@ play."
       目前**只被 `CharacterEditor.tsx:2084` 使用** ✗（props 依赖编辑器状态，疑含未保存草稿 ✗）
       → **别硬从 VNStage 直接打开** ✗；先读其 props 与编辑器挂载方式 ✓，再定"独立挂载 or 共用" ✓；
       这一支属**设计判断**，不是机械改动 ✗。
+      **②定案（2026-09-14 三次侦察）**：对话框**本身是受控组件、不与编辑器耦合** ✓ —— props 仅
+      `{expressions, initialPrompt, onGenerated, onPortrait, onClose}` ✓（前两个可由角色推导 ✓：
+      `portrait of ${name}, ${description}` ✓）；耦合只在两个回调 —— 编辑器写**未保存表单态** ✗，
+      **VN 侧改写角色 store** ✓。→ **直接从 VNStage 挂载即可，不必抽共用包装** ✓（两处宿主语义不同 ✓）。
+      落地量：读角色 store 的 update API ✓ → 加 import/布尔/渲染块 ✓ → zh/en 词条 ✓ ≈ **3 片** ✓。
 - [ ] Gallery: a "music room" tab listing a world's uploaded BGM tracks (Ren'Py convention) — the
       tracks already exist per-world. `src/components/gallery/GalleryView.tsx`.
 
