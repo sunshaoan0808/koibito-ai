@@ -2,7 +2,7 @@
 
 > **文档权威性**｜本文件是**项目现状快照**（"现在是什么样"）。
 > 待办与排期看 `DEVELOPMENT_PLAN.md`；FP 吸收进度看 `docs/ABSORPTION-PLAN.md`。
-> **刷新日期：** 2026-09-14 ｜ **数据口径：** `tools/audit/count_scale.py` ＋ 全量测试套件（149 文件 / 2682 用例，2026-09-14 09:44 实测）
+> **刷新日期：** 2026-09-14 ｜ **数据口径：** `tools/audit/count_scale.py` ＋ 全量测试套件（149 文件 / 2682 用例，2026-09-14 16:40 实测）
 > **来源：** 本仓库基于上游 [pnotisdev/rp](https://github.com/pnotisdev/rp)（MIT）二次开发，版权见 `LICENSE` 与 `NOTICE`。
 
 ---
