@@ -413,11 +413,16 @@ play."
 - [ ] **Shared `<InheritableField>`** — a wrapper showing "inherited from World · override" for the
       values that cascade (intimacy: global/world; instruct template: global/character; VN + assists:
       global/world-template/chat) instead of explaining precedence only in hint prose.
-      ⏳ 2026-09-14 recon: each cascade is already resolved inline at its call site (e.g.
-      `ChatWindow.tsx:447` — `chat?.assistOverrides?.visualNovelMode ?? globalVisualNovelMode`), so
-      it's not a data-model job: build one pure resolver per cascade returning `{ value, source }`
-      with source ∈ global/world/template/chat, unit-test that, then a presentational wrapper that
-      reads it. No store changes needed.
+      ⏳ 2026-09-14 部分落地 —— 共享徽章 `InheritanceBadge`（`src/components/ui/`）+ 纯解算器
+      `src/lib/settings/inheritance.ts`（`inheritedFrom(value, layer)` → `null` = 在本层定的、
+      `'global'` = 落穿到全局设置）已接在**聊天侧**三个覆盖选择器上（`RelationshipPanel` 的
+      Track relationship / Suggest choices / Visual Novel mode），真实 UI 里两种徽章都验到了：
+      `Auto` → 「已为本聊天覆盖」、`Use global default` → 「继承自全局设置」。`SelectField` 顺势补
+      `actions` 槽（与 `TextAreaField` 对齐）好挂徽章。
+      **剩余两个面**：世界编辑器的亲密设定（world 层）、角色编辑器的 instruct template（character 层）。
+      **顺带修正**：拆分后这两条 hint 仍写着 "Settings → Generation"，实际已移到 Roleplay。
+      **一条实测纠正**：运行时 assists 只有 **chat / global 两层**（`assistOverridesForTemplate()` 是
+      新建聊天时把模板烘进 `assistOverrides` 种子），不存在活的 template 层，故徽章不谎报第三层。
 - [ ] **More cross-links** — mode chip → world template picker; locked VN background → world Scenes
       tab; "relationship tracking is off" state → the toggle; CharacterEditor VN tab → world Scenes.
       ⏳ 2026-09-14 recon: this is a **navigation-plumbing** job, not four one-liners. There is no UI

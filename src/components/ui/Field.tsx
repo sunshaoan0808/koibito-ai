@@ -70,17 +70,19 @@ export function NumberField({
 export function SelectField({
   label,
   hint,
+  actions,
   className = '',
   children,
   ...props
 }: {
   label: string
   hint?: ReactNode
+  actions?: ReactNode
   className?: string
   children: ReactNode
 } & SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <FieldFrame label={label} hint={hint} className={className}>
+    <FieldFrame label={label} hint={hint} actions={actions} className={className}>
       <select {...props} className={`${CONTROL_CLASS} cursor-pointer`}>
         {children}
       </select>

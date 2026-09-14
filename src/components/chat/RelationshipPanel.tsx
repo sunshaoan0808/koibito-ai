@@ -25,6 +25,8 @@ import type { Character, GalleryEntry } from '@/lib/characters/cardSpec'
 import type { Chat, WorldCard } from '@/lib/types'
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
 import { chatFactsApi, chatsApi, relationshipEventsApi } from '@/lib/api/client'
+import { InheritanceBadge } from '@/components/ui/InheritanceBadge'
+import { inheritedFrom } from '@/lib/settings/inheritance'
 import { getGiftCatalog, giftTasteLabel } from '@/lib/dating/gifts'
 import { getItemCatalog, itemEffectSummary } from '@/lib/dating/items'
 import {
@@ -1027,7 +1029,17 @@ export function RelationshipPanel({
             </SelectField>
             <SelectField
               label="Track relationship for this chat"
-              hint="Overrides the global Settings → Generation default, just for this chat."
+              actions={
+                <InheritanceBadge
+                  layer="chat"
+                  from={inheritedFrom(chat.assistOverrides?.autoTrackRelationship, 'chat')}
+                />
+              }
+              hint={
+                chat.assistOverrides?.autoTrackRelationship === undefined
+                  ? 'No override here — the global Settings → Roleplay default is in force.'
+                  : 'This chat carries its own value, independent of the global Settings → Roleplay default.'
+              }
               value={overrideValue('autoTrackRelationship')}
               onChange={(e) => setOverride('autoTrackRelationship', e.target.value as 'default' | 'on' | 'off')}
             >
@@ -1037,7 +1049,17 @@ export function RelationshipPanel({
             </SelectField>
             <SelectField
               label="Suggest choices for this chat"
-              hint="Overrides the global Settings → Generation default, just for this chat."
+              actions={
+                <InheritanceBadge
+                  layer="chat"
+                  from={inheritedFrom(chat.assistOverrides?.autoSuggestChoices, 'chat')}
+                />
+              }
+              hint={
+                chat.assistOverrides?.autoSuggestChoices === undefined
+                  ? 'No override here — the global Settings → Roleplay default is in force.'
+                  : 'This chat carries its own value, independent of the global Settings → Roleplay default.'
+              }
               value={overrideValue('autoSuggestChoices')}
               onChange={(e) => setOverride('autoSuggestChoices', e.target.value as 'default' | 'on' | 'off')}
             >
@@ -1047,6 +1069,12 @@ export function RelationshipPanel({
             </SelectField>
             <SelectField
               label="Visual Novel mode for this chat"
+              actions={
+                <InheritanceBadge
+                  layer="chat"
+                  from={inheritedFrom(chat.assistOverrides?.visualNovelMode, 'chat')}
+                />
+              }
               hint="Overrides the global Settings → Appearance default, just for this chat. 'Auto' turns it on only once this character has sprites and the world has scene art."
               value={vnModeOverrideValue()}
               onChange={(e) => setVnModeOverride(e.target.value as 'default' | 'on' | 'off' | 'auto')}

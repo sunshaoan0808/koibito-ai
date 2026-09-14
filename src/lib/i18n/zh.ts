@@ -398,4 +398,12 @@ export const ZH: Record<string, string> = {
   'Scene & relationship': '场景与关系',
   'Authoring': '创作',
   'Power user': '高级设置',
+
+  // Inheritance badges — names the layer a cascading value actually came from
+  'Inherited from {layer}': '继承自{layer}',
+  'Overridden for {layer}': '已为{layer}覆盖',
+  'Settings (global)': '全局设置',
+  'the World': '世界',
+  'the Character': '角色',
+  'this chat': '本聊天',
 }
