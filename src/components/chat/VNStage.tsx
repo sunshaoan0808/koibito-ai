@@ -1125,7 +1125,7 @@ export function VNStage({
               utilities={utilities}
               caption={dialogueCaption}
             >
-              {renderMessageText(shownDialogueText, regexScripts, dialogueSfx)}
+              {renderMessageText(shownDialogueText, regexScripts, dialogueSfx, character?.assets)}
             </VNDialogueBox>
           </div>
 

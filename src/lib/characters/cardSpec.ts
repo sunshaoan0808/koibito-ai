@@ -156,6 +156,8 @@ export interface Character {
   explicitVoiceNote?: string
   /** Unlockable CG-like gallery entries. */
   gallery?: GalleryEntry[]
+  /** Named image assets a character can paste into a message with `{{image::name}}` (`text/inlineAssets.ts`). Keys are the names authors type; values are urls/data-urls, same shape as `sprites`. */
+  assets?: Record<string, string>
   /** Optional narrative starting points offered when creating a new chat with this character. */
   relationshipStarters?: RelationshipStarter[]
   /** Per-character TTS override; unset falls back to the global Settings → Voice config. */
