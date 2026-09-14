@@ -464,6 +464,11 @@ play."
 
 - [ ] Sprite/CG: a subtle "focus" scene-dim while the composer is focused (draws the eye to input).
 - [ ] `WorldCard` "opening line/scene" author field so a fresh chat's first screen is directed, not
+      **466 侦察（2026-09-14）**：① 类型在 `src/lib/types.ts:525` `WorldCard` ✓ —— ⚠️ **"开场镜头"那半已存在**：
+      `:542-545` 的 **`defaultBackgroundId`** ✓（注释明写"VN 永不落在空占位渐变上" ✓）→ 466 真缺的是**文字侧开场** ✗；
+      ② ⚠️ **与 ④ 语义重叠**：④ 刚把**角色 greeting** 做成可填空 ✓ → 世界的开场白**该先于/替换 greet ing 吗** ✗✗
+      —— **此问必须先定** ✓（否则两 feature 打架 ✓）；③ 世界编辑器**不在** `src/components/world/`（那里只有
+      `TownFeedView.tsx` ✗）→ 先 glob 定位世界编辑器 ＋ 看 `defaultBackgroundId` 在哪个 UI 里被作者填写 ✓。
       guessed. Overlaps with the Tier 1 default-background item.
 - [ ] Persona ↔ character "compatibility" nudge (Persona same-arcana bonus) — persona interests
       matching a character's `likes` gives a small warmth modifier.
