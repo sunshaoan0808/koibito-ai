@@ -248,7 +248,8 @@ import {
 import { assessRapport } from '@/lib/dating/rapport'
 import { bookAppliesToChat } from '@/lib/worldinfo/scope'
 import { buildFactsLorebook, dedupeFacts, factContent } from '@/lib/worldinfo/facts'
-import { claimsFromFacts, knowledgeLorebookFor, mergeClaims } from '@/lib/knowledge/claims'
+import { claimsFromFacts, knowledgeLorebookFor, mergeClaims, propagateClaims } from '@/lib/knowledge/claims'
+import { claimsFromFeed } from '@/lib/knowledge/feedBridge'
 import { useSettingsStore } from '@/lib/store/useSettingsStore'
 import { errorMessage, toastError, toastInfo, toastSuccess } from '@/lib/store/useToastStore'
 import { playSendBlip } from '@/lib/audio/sfx'
@@ -641,6 +642,21 @@ export function useChatSession(chatId: string | null) {
         claims: mergeClaims(
           // What this character was told while elsewhere — the only claims that can cross chats.
           freshChat.knowledgeClaims ?? [],
+          // 旁线事件（`Chat.townFeed`）：玩家不在场时段镇上发生的事。它们**不直接**进提示词——
+          // 只有「在场者是证人」并且「沿社交图能被告知」的角色才会通过上面的 knowledge 门看到。
+          // 这就是 town-feed 三期的验收：信息流不是旁白。
+          propagateClaims({
+            claims: claimsFromFeed(freshChat.townFeed ?? []),
+            // 谁能"听说"完全由图决定：`toldTargets` 按**名字**匹配角色卡上的社交连接，与在场名单无关。
+            characters: [speaker, ...roster].map((c) => ({
+              id: c.id,
+              name: c.card.name,
+              connections: c.socialConnections,
+            })),
+            // 只在**同一世界时钟格**内传播（`propagateClaims` 的硬条件）：旁线事件在它发生的那个格被
+            // 结算，才有"来得及说上话"这一说；上一个阶段的事不会突然传遍全镇。
+            at: { day: world?.currentDay ?? 0, phaseIndex: world?.currentPhaseIndex ?? 0 },
+          }),
           claimsFromFacts({
             facts: activeFacts.map((f) => ({ id: f.id, text: factContent(f) })),
             witnesses: presentIds,

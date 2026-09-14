@@ -1,6 +1,11 @@
 # 设计稿 · 城镇信息流（Town Feed）
 
-> 状态：**一期已落地**（`src/lib/world/townFeed.ts` ＋ `townFeed.test.ts`，10 用例）；二期（UI＋持久化）与三期（接知识迷雾）未做。
+> 状态：**三期全部落地**（一期 `src/lib/world/townFeed.ts` ＋ `townFeed.test.ts` 10 用例；二期 `Chat.townFeed` ＋ `TownFeedView` 已上站；三期 `src/lib/knowledge/feedBridge.ts` ＋ 接线进 `useChatSession` 的 knowledge 段，10 用例）。
+>
+> 三期实现说明（两条验收的可执行落点）：
+> - ① 不在场的旁线事件**不进**在场聊天的提示词：`feedBridge` 只回答"谁在场"，谁能看到由 `knowledgeLorebookFor` 的门决定；`headline` **永不**进提示词，进 `text` 的是 `detail`
+> - ② 只有图上有通路的角色能"听说"：`propagateClaims` 按**名字**匹配角色卡的 `socialConnections`，且**只在同一世界时钟格**内传播（上个阶段的事不会突然传遍全镇）
+> - 验收落点：`src/lib/knowledge/feedBridge.integration.test.ts`——无通路者连标题都看不到 / 有通路者看得到 / 换时钟格传不动 / 传播单调且幂等
 > 自研项，原项目 front-porch-AI 无此机制（全仓实测 `fogOf`/`knowledgeState`/`saveSlot` 0 命中，最近似的 Stoop 是角色卡社区仓库，非信息流，且本仓已列"不推荐吸收"）。
 > 落笔依据：本仓现码实测（行号见下），非推测。
 
