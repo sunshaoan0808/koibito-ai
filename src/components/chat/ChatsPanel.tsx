@@ -1,6 +1,8 @@
 ﻿import { useRef, useState } from 'react'
 import { Copy, GitFork, MessageSquarePlus, MoreHorizontal, PanelLeftClose, PanelLeftOpen, Pencil, Pin, PinOff, Plus, Star, Trash2 } from 'lucide-react'
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
+import { allTags, filterChatsByTag } from '@/lib/chat/tags'
+import { ChatTagBar } from '@/components/chat/ChatTagBar'
 import { charactersApi, chatsApi, worldsApi } from '@/lib/api/client'
 import { useChatBackendClient } from '@/lib/hooks/useChatBackendClient'
 import { createChat } from '@/lib/chat/createChat'
@@ -27,7 +29,14 @@ export function ChatsPanel({
   // Section 9's chat-pinning gap: pinned chats float to the top regardless of `updatedAt`, same
   // relative order otherwise (a stable sort — every modern JS engine's `Array.sort` guarantees
   // this) so pinning something doesn't also silently reshuffle the rest of the list.
-  const chats = [...unsortedChats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+  const [tagFilter, setTagFilter] = useState('')
+  const sortedChats = [...unsortedChats].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+  // Tag filtering happens *here*: `chats` stays the name every render path already uses, but it is
+  // now the filtered view — so the list, the empty state and the collapsed rail all inherit it.
+  const chats = filterChatsByTag(sortedChats, tagFilter)
+  // Chips come from the *unfiltered* set, so a chip never disappears the moment you click it.
+  const tagsInUse = allTags(sortedChats)
+  const activeChat = sortedChats.find((c) => c.id === activeChatId) ?? null
   const characters = useApiQuery('characters', () => charactersApi.list(), []) ?? []
   const worlds = useApiQuery('worlds', () => worldsApi.list(), []) ?? []
   const [showNew, setShowNew] = useState(false)
@@ -229,6 +238,7 @@ export function ChatsPanel({
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-2">
+        <ChatTagBar tagsInUse={tagsInUse} activeChat={activeChat} value={tagFilter} onChange={setTagFilter} />
         {chats.map((chat) => {
           const character = charFor(chat.characterId)
           const presence = presenceFor(character)
