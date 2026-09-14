@@ -33,6 +33,7 @@ import { scrollToMessage } from '@/lib/scrollToMessage'
 import { buildChatTranscriptHtml, chatTranscriptFilename, downloadChatTranscript } from '@/lib/export/chatTranscript'
 import { chatJsonlFilename, downloadChatJsonl, serializeChatJsonl } from '@/lib/export/chatJsonl'
 import { buildChatEpub, buildChatChapters, chatEpubFilename, downloadChatEpub } from '@/lib/export/epub'
+import { resolveAssetMap } from '@/lib/export/inlineAssetsHtml'
 import { audiobookFilename, downloadAudiobook, narrateChapters, type NarrationProgress } from '@/lib/voice/audiobook'
 import { synthesizeSpeechClip } from '@/lib/voice/cloudTts'
 import { appendImage, generateTurnImage, sceneSnapshotPrompt } from '@/lib/image/turnImage'
@@ -389,8 +390,10 @@ export function ChatWindow({
 
   // P2-3: the same chat as an EPUB — chapters every `DEFAULT_MESSAGES_PER_CHAPTER` turns, sharing the
   // HTML transcript's SFX/regex policy so the two exports never disagree about the text.
-  const exportEpub = () => {
+  const exportEpub = async () => {
     if (!chat) return
+    // Same "inline once, up front" rule as the transcript export: the book must stay self-contained.
+    const assetMap = await resolveAssetMap(character?.assets)
     try {
       downloadChatEpub(
         buildChatEpub({
@@ -399,6 +402,7 @@ export function ChatWindow({
           persona,
           messages,
           regexScripts,
+          assetMap,
           sfx: !sfxBursts
             ? { disabled: true }
             : { extraWords: [...parseSfxWordList(sfxWords), ...(character?.sfxWords ?? [])] },
