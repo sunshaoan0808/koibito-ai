@@ -1,6 +1,8 @@
 # 设计稿 · 知识迷雾（Knowledge Fog）
 
-> 状态：**一/二/三期已落地**（`src/lib/knowledge/claims.ts` ＋ `claims.test.ts`，20 用例）；**编辑器维度**未做。
+> 状态：**三期全部落地**（`src/lib/knowledge/claims.ts` ＋ `claims.test.ts`，20 用例）；**编辑器维度亦已落地**
+> （`WorldInfoView` 的「谁知道」列，`a7de214`：按**世界**合并而非按会话重复——`mergeClaims` 让同一桩事
+> 抵达三个聊天只出现一行；每行显示事实 / 见证者 / 被告知者 / 世界时钟格；纯展示、不阻塞链路）。
 >
 > 三期为"知识真的能旅行"：`propagateClaims`（世界时钟格内沿社交图传播、幂等）＋ `mergeClaims`
 > （按 id 合并、`toldIds` 取并集，绝不因后写覆盖前写）＋ `Chat.knowledgeClaims`（零迁移）。写入侧

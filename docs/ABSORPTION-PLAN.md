@@ -120,17 +120,28 @@ Afterglow、喜欢/讨厌清单（profile.likes + weatherPreferences）、礼物
 ②**分支树** → 已交付，FP 无参考可对齐；③**NPC 互动** → 若目标只是"角色之间说话"，FP 的导演模式即正解且我们已有，
 先盘 `autoAdvance` 实覆盖；④**城镇信息流 / 知识迷雾 / 插件扩展 API** → **FP 无先例，属真正自研**，须各自先出设计稿。
 
+> **§12 收官（2026-09-14 实测对账）**：④中三项**自研设计稿已出且已全部落地**，§12 至此 **6/6 全交付**
+> （分支树 + 自研三项 + 存档槽与 NPC 互动的口径已定）。台账与实际不符的旧状态已按代码实测刷新，
+> 见 `DEVELOPMENT_PLAN.md` P4 §12 行与 `PROJECT_SUMMARY.md` 模块地图。设计稿与分期验收：
+> `docs/design/README.md`（town-feed 三期全落 / knowledge-fog 三期 + 编辑器维度 / plugin-api 三期全落）。
+>
+> ⚠️ 下面 §12 表里 `docs/user-guide.md`、`docs/stoop-report-gate-app.md` 是**原项目 front-porch-AI 的路径**，
+> 本仓没有它们——写作时带 `FP:` 前缀以免被 `tools/audit/check_doc_refs.py` 当成幽灵引用。
+
 ## 六、下一步计划（按序）
 
 > **排期与验收标准以 `DEVELOPMENT_PLAN.md` 为唯一口径**，本节只保留吸收线的顺序建议。
+> **路径注意**：`DEVELOPMENT_PLAN.md` / `PROJECT_SUMMARY.md` 在**仓库根**，不在 `docs/` 下。
 
-1. **纠偏**：3 处文案英文残渣 + `server/llmProxy.ts` 头注释同步（`DEVELOPMENT_PLAN.md` P0）。
-2. **手机实测**吸收效果回归（判定器、承诺账本、需求衰减、日记召回）。
-3. **TTS 通道打通**：前端 `src/lib/voice/cloudTts.ts:43` 已打 `/api/llm/v1/audio/speech`，只差自己的网关开路由（P1-4）。
-4. **P1 吸收推进**：成长回写（§五 第 4 项）→ 自动时间流逝（第 2 项，做成可选项以尊重手动时钟哲学）→ Chaos 扩容（第 3 项，70 → 150+）。
-5. **VPS → 安卓 APK**（分发线，见 `DEVELOPMENT_PLAN.md` P5）。
+1. ~~**纠偏**：3 处文案英文残渣 + `server/llmProxy.ts` 头注释同步~~ → **已完成**（`11a4269`，关闭 P0-1/P0-2/P0-4）。
+2. **手机实测**吸收效果回归（判定器、承诺账本、需求衰减、日记召回）—— **仍未做**（唯一未动的验证项）。
+3. ~~**TTS 通道打通**~~ → **已打通**（2026-09-14 上线验收实测 `POST /v1/audio/speech → 200`、`audio/mpeg 11952 bytes`）。
+4. ~~**P1 吸收推进**（成长回写 / 自动时间流逝 / Chaos 扩容）~~ → **已完成**（§五 13 项全吸收）。
+5. **VPS → 安卓 APK**（分发线，见 `DEVELOPMENT_PLAN.md` P5）—— 未排期。
 
-> 原第 1、2 项已完成：判定器静默失败 = 判定延迟误判（实测正常）；加固三项（no-store / HMAC 会话 / BODY tee 移除）均已完成。
+> **吸收线收官状态（2026-09-14）**：FP 机制 **13/13 全吸收**；§12 平台级 **6/6 全交付**
+> （分支树 + 城镇信息流 + 知识迷雾 + 插件 API 四项落地，存档槽/NPC 互动口径已定）。
+> 剩余**不是吸收**，而是：① 手机实测回归（第 2 项）；② APK 分发（第 5 项）；③ `PROJECT_SUMMARY.md` §6 的已知缺陷。
 
 ## 七、上游同步注意
 
