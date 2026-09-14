@@ -463,12 +463,21 @@ play."
 ## Tier 6 — Smaller polish
 
 - [ ] Sprite/CG: a subtle "focus" scene-dim while the composer is focused (draws the eye to input).
+      **465 侦察＋定案（2026-09-14）**：⚠️ `VNStage` **完全不知道 composer 是否聚焦** ✗（grep 无任何
+      focus 相关 ✓）→ 需要**从父组件新增一个 prop** ✓＋条件类 ✓（2 文件、约 3-4 片 ✗）。
+      好消息：**暗化写法已有现成惯用法** ✓ —— `VNStage.tsx:179-180` 的
+      `[filter:brightness(0.5)_saturate(0.72)]` ＋ `transition-[filter]` ✓，**照抄即可** ✓（别自创 ✗）。
 - [ ] `WorldCard` "opening line/scene" author field so a fresh chat's first screen is directed, not
       **466 侦察（2026-09-14）**：① 类型在 `src/lib/types.ts:525` `WorldCard` ✓ —— ⚠️ **"开场镜头"那半已存在**：
       `:542-545` 的 **`defaultBackgroundId`** ✓（注释明写"VN 永不落在空占位渐变上" ✓）→ 466 真缺的是**文字侧开场** ✗；
       ② ⚠️ **与 ④ 语义重叠**：④ 刚把**角色 greeting** 做成可填空 ✓ → 世界的开场白**该先于/替换 greet ing 吗** ✗✗
       —— **此问必须先定** ✓（否则两 feature 打架 ✓）；③ 世界编辑器**不在** `src/components/world/`（那里只有
       `TownFeedView.tsx` ✗）→ 先 glob 定位世界编辑器 ＋ 看 `defaultBackgroundId` 在哪个 UI 里被作者填写 ✓。
+      **②定案（2026-09-14 哈雷酱自决 ✓）**：**加性（additive）** ✓ —— 世界开场白是**场景铺陈行**，
+      播在角色 greeting **之前** ✓；理由：① 完全不碰 ④ 的填空机制 ✓（零回归风险 ✓）；
+      ② 符合 VN 惯例（先铺场景、后进对白 ✓）；③ 世界未填时行为**逐字节不变** ✓（KISS/YAGNI ✓）。
+      落地：`WorldCard.openingLine?: string` ✓ → 世界编辑器一处输入框 ✓ → `createChat` 在 greeting 之前
+      插一条系统/旁白行 ✓（复用 ④ 的路径 ✓）。
       guessed. Overlaps with the Tier 1 default-background item.
 - [ ] Persona ↔ character "compatibility" nudge (Persona same-arcana bonus) — persona interests
       matching a character's `likes` gives a small warmth modifier.
