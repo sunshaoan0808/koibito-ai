@@ -485,7 +485,7 @@ export interface Chat {
      *  afterward from `RelationshipPanel`. `'auto'` resolves live in `ChatWindow` — VN mode only
      *  once the character has sprites and the world has scene art (`isVnReady`), never a blank void. */
     visualNovelMode?: boolean | 'auto'
-    /** Same fallback as the two above, over Settings → Generation's global "Slow-burn pacing". */
+    /** Same fallback as the two above, over Settings → Roleplay's global "Slow-burn pacing". */
     slowBurnPacing?: boolean
     /** A `SystemPromptPreset.id` (`src/lib/prompt/systemPrompts.ts`) — wins over the global system
      *  prompt but still loses to the character's own `system_prompt`, resolved in `useChatSession`'s

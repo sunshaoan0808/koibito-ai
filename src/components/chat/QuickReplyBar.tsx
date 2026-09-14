@@ -13,7 +13,7 @@ const CHIP_CLASSES = {
 }
 
 /**
- * Section 14's Quick Replies bar — a fixed, user-authored row (Settings → Generation), unlike
+ * Section 14's Quick Replies bar — a fixed, user-authored row (Settings → Roleplay), unlike
  * `ChoiceList`'s AI-suggested one: always the same buttons, always available, never regenerated.
  * Deliberately shown only when `ChoiceList` isn't (see `ChatWindow.tsx`) so at most one chip row
  * ever competes for the same strip of space above the composer.
