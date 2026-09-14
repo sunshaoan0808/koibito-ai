@@ -93,6 +93,11 @@ export async function createChat(opts: CreateChatOptions): Promise<Chat> {
     const macroCtx = { charName: character.card.name, userName: personaName || 'You' }
     const rendered = greetings.map((g) => fillTemplate(substituteMacros(g, macroCtx), opts.slotValues ?? {}))
     const activeSwipe = Math.min(greetingIndex, rendered.length - 1)
+    // 466: the world's scene-setting line plays *before* the character's greeting (`WorldCard.openingLine`).
+    const openingLine = opts.world?.openingLine?.trim()
+    if (openingLine) {
+      await messagesApi.create({ chatId: chat.id, role: 'system', text: openingLine })
+    }
     const greetingMessage = await messagesApi.create({
       chatId: chat.id,
       role: 'char',

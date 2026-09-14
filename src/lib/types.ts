@@ -543,6 +543,10 @@ export interface WorldCard {
    *  background tag of its own (no model connected, the model omitted `<<scene:>>`, or it picked
    *  a still-locked one), so VN mode never opens on a bare placeholder gradient. */
   defaultBackgroundId?: string
+  /** 466: a scene-setting line the world plays *before* the character's greeting in a fresh chat, so
+   *  the first screen is directed by the world and not only by the character card. Additive — unset
+   *  means the greeting is the whole opening, byte-for-byte as before. */
+  openingLine?: string
   /** World-authored scene locations beyond the 12 built-ins — see `CustomBackground`. */
   customBackgrounds?: CustomBackground[]
   /** Background-music URLs keyed by scene mood id (`src/lib/vn/moods.ts`), plus a `default` key. VN mode only. */
