@@ -2,7 +2,7 @@
 
 > **文档权威性**｜本文件是**项目现状快照**（"现在是什么样"）。
 > 待办与排期看 `DEVELOPMENT_PLAN.md`；FP 吸收进度看 `docs/ABSORPTION-PLAN.md`。
-> **刷新日期：** 2026-09-14 ｜ **数据口径：** `tools/audit/count_scale.py` ＋ 全量测试套件（144 文件 / 2644 用例，2026-09-14 09:44 实测）
+> **刷新日期：** 2026-09-14 ｜ **数据口径：** `tools/audit/count_scale.py` ＋ 全量测试套件（149 文件 / 2682 用例，2026-09-14 09:44 实测）
 > **来源：** 本仓库基于上游 [pnotisdev/rp](https://github.com/pnotisdev/rp)（MIT）二次开发，版权见 `LICENSE` 与 `NOTICE`。
 
 ---
@@ -36,7 +36,7 @@
 |---|---|
 | `src` + `server` TS/TSX 文件 | **448** |
 | 代码行数 | **80,312** 行 |
-| 测试文件 / 用例 | **144 个 / 2,644 个**（2026-09-14 09:44 全量通过） |
+| 测试文件 / 用例 | **149 个 / 2,682 个**（2026-09-14 16:40 口径 `count_scale.py` 实测；全量套件通过） |
 | 约会与亲密机制模块 | **28 个**（`src/lib/dating/`，不含测试） |
 | 玩法模板 | **3 个**（`freeform` / `visual_novel` / `dating_sim`；`slice_of_life` 已并入 `freeform`） |
 | 命运轮盘事件池 | **152 条**（幸运 27 / 厄运 27 / 混乱 32 / 离谱 34 / 滑稽 32；其中 **31 条 `spicy` 默认关闭**；**重复文案 0 组**，口径：`tools/audit/count_chaos_pool.py`） |
@@ -128,7 +128,7 @@
 ```bash
 npm install
 npm run dev          # 前端 vite --host + 服务端 tsx watch
-npm test             # Vitest（144 文件 / 2,644 用例，2026-09-14 实测）
+npm test             # Vitest（149 文件 / 2,682 用例，2026-09-14 实测）
 npm run typecheck    # 三套 tsconfig 全量类型检查
 npm run build        # tsc --noEmit && vite build
 docker-compose up -d # 容器方式
