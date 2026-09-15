@@ -19,6 +19,7 @@ import { InheritanceBadge } from '@/components/ui/InheritanceBadge'
 import { inheritedFrom } from '@/lib/settings/inheritance'
 import type { IntimacyDetailLevel } from '@/lib/store/useSettingsStore'
 import { TriggerActionRows, TriggerConditionRows } from '@/components/worlds/TriggerRows'
+import { CampaignTabEditor, campaignDefFromDraft, campaignDraftFromDef, type CampaignDraft } from '@/components/worlds/CampaignTabEditor'
 import { describeAction, describeCondition, slugifyTriggerId, type Trigger } from '@/lib/world/triggers'
 import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
@@ -214,6 +215,7 @@ const WORLD_TABS: EditorTab[] = [
   { id: 'lore', label: 'Lore' },
   { id: 'scenes', label: 'Scenes' },
   { id: 'dating', label: 'Dating sim' },
+  { id: 'campaign', label: 'Campaign' },
   { id: 'clock', label: 'Clock' },
 ]
 
@@ -257,6 +259,9 @@ function WorldEditor({
   const [intimacyLevel, setIntimacyLevel] = useState<IntimacyDetailLevel | undefined>(base.intimacyLevel ?? undefined)
   const [triggers, setTriggers] = useState<Trigger[]>(base.triggers ?? [])
   const [newTriggerLabel, setNewTriggerLabel] = useState('')
+  /** 336: campaign draft mirrors the dating-tab pattern — numeric fields stay strings in the
+   *  draft (NumberField emits strings) and `campaignDefFromDraft` normalizes on save. */
+  const [campaign, setCampaign] = useState<CampaignDraft>(() => campaignDraftFromDef(base.campaign))
   const [currentDay, setCurrentDay] = useState(base.currentDay ?? 0)
   const [currentPhaseIndex, setCurrentPhaseIndex] = useState(base.currentPhaseIndex ?? 0)
   const [advancing, setAdvancing] = useState(false)
@@ -314,6 +319,11 @@ function WorldEditor({
       // would survive being cleared. Same reason `Chat.activeEvent`/`authorNote` use null.
       intimacyLevel: intimacyLevel ?? null,
       triggers,
+      // 336: `campaignDefFromDraft` returns `undefined` for a disabled arc (blank premise or
+      // zero days); sent as `null` so an existing arc can actually be cleared — same reason
+      // `intimacyLevel` above can't just be omitted. `normalizeCampaign` maps null → undefined
+      // and the store merge drops the key.
+      campaign: campaignDefFromDraft(campaign) ?? null,
     }
     try {
       if (world) await worldsApi.update(world.id, payload)
@@ -1249,6 +1259,10 @@ function WorldEditor({
             </div>
           </Section>
         </div>
+      )}
+
+      {tab === 'campaign' && (
+        <CampaignTabEditor draft={campaign} onChange={setCampaign} customSceneFlags={customSceneFlags} />
       )}
 
       {tab === 'clock' && world && (

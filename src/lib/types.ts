@@ -17,6 +17,7 @@ import type { IntimacyUnlockable } from '@/lib/dating/intimacyCatalog'
 import type { Afterglow } from '@/lib/dating/aftercare'
 import type { RealismState } from '@/lib/realism/engine'
 import type { Trigger } from '@/lib/world/triggers'
+import type { CampaignDef } from '@/lib/world/campaign'
 import type { DayPhase } from '@/lib/world/calendar'
 import type { IntimacyDetailLevel } from '@/lib/store/useSettingsStore'
 import type { IntimacyScene } from '@/lib/dating/intimacyScene'
@@ -575,6 +576,10 @@ export interface WorldCard {
   currentDay?: number
   /** Index into `calendar.ts`'s `PHASES` (morning/afternoon/evening/night) — 0 if never advanced. */
   currentPhaseIndex?: number
+  /** Optional route/campaign arc (336, Mystic-Messenger-style): a premise, a day count, and an
+   *  ordered ending list with stage/flag win conditions. Unset = free "keep chatting", exactly
+   *  as before. Days count on the shared world clock (`currentDay`); `startDay` anchors the arc. */
+  campaign?: CampaignDef
   /** Picked at creation (`src/lib/world/worldTemplates.ts`), editable after — narrows which editor tabs show. Unset behaves like 'dating_sim' (full feature set). */
   template?: WorldTemplateId
   createdAt: number

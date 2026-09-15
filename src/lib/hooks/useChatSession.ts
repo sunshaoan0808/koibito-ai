@@ -134,6 +134,7 @@ import {
   selectSocialReaction,
 } from '@/lib/world/ambientEvents'
 import { findArchetypeMatch, participantRelationshipGuidance } from '@/lib/chat/participantArchetype'
+import { campaignPromptLine } from '@/lib/world/campaign'
 import {
   applyBreakupScar,
   clampAffection,
@@ -710,6 +711,9 @@ export function useChatSession(chatId: string | null) {
               // Realism Engine absorption: day-energy / sleepiness, deterministic from the clock.
               // Emitted only when it would color the reply (see describeVitality).
               describeVitality(world.currentDay ?? 0, promptPhaseIndex),
+              // 336: the campaign arc's premise + deadline + goal lines, so the model plays
+              // toward the arc. Empty without a campaign — the old behavior, byte-for-byte.
+              campaignPromptLine(world.campaign, world.currentDay ?? 0),
             ]
           : []),
         freshChat.activeEvent?.title

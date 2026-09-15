@@ -966,6 +966,7 @@ export function ChatWindow({
         <DayPlannerPanel
           character={character}
           world={world}
+          chat={chat}
           activeEvent={chat.activeEvent}
           onOpenActiveEvent={() => {
             setShowDayPlanner(false)

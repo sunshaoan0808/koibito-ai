@@ -16,6 +16,15 @@ describe('hiddenWorldTabs', () => {
     expect(hidden).toContain('clock')
   })
 
+  it('hides the campaign tab for freeform too — no clock, no arc', () => {
+    expect(hiddenWorldTabs('freeform')).toContain('campaign')
+  })
+
+  it('shows the campaign tab for dating_sim and visual_novel', () => {
+    expect(hiddenWorldTabs('dating_sim')).not.toContain('campaign')
+    expect(hiddenWorldTabs('visual_novel')).not.toContain('campaign')
+  })
+
   it('hides only the dating tab for visual_novel', () => {
     expect(hiddenWorldTabs('visual_novel')).toEqual(['dating'])
   })

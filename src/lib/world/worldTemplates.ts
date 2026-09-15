@@ -21,7 +21,7 @@ export function normalizeWorldTemplateId(id: string | undefined): WorldTemplateI
 /** World-editor tab ids (WorldsView.tsx's WORLD_TABS) hidden for a given template. Never hides
  *  'overview'/'lore'/'scenes' — every template still wants a setting, lore, and backgrounds. */
 const HIDDEN_TABS: Record<WorldTemplateId, string[]> = {
-  freeform: ['dating', 'clock'],
+  freeform: ['dating', 'clock', 'campaign'],
   visual_novel: ['dating'],
   dating_sim: [],
 }

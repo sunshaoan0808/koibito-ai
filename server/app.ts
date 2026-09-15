@@ -439,6 +439,45 @@ function normalizeRelationshipThresholds(raw: unknown) {
   return Object.keys(result).length > 0 ? result : undefined
 }
 
+/** 336's route/campaign arc: premise + day count + ordered endings with stage/flag win
+ *  conditions. Invalid pieces are dropped, not rejected — a malformed ending never blocks the
+ *  whole world save; `campaign.ts`'s `isCampaignEnabled` is the final gate at read time. */
+function normalizeCampaign(raw: unknown) {
+  if (!raw || typeof raw !== 'object') return undefined
+  const obj = raw as Record<string, unknown>
+  const STAGES = new Set(['near_strangers', 'acquaintances', 'warming_up', 'getting_close', 'close', 'sweethearts'])
+  const str = (v: unknown, max: number) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : '')
+  const premise = str(obj.premise, 1000)
+  const dayCount = Number.isFinite(Number(obj.dayCount)) ? Math.max(0, Math.min(365, Math.round(Number(obj.dayCount)))) : 0
+  const startDay = Number.isFinite(Number(obj.startDay)) ? Math.max(0, Math.min(100000, Math.round(Number(obj.startDay)))) : 0
+  const endings = Array.isArray(obj.endings)
+    ? (obj.endings as Record<string, unknown>[])
+        .filter((e) => !!e && typeof e === 'object')
+        .map((e, i) => {
+          const winKind = e.winKind === 'flags' ? 'flags' : 'stage'
+          const base = {
+            id: typeof e.id === 'string' && (e.id as string).trim() ? (e.id as string).trim() : `ending-${i}`,
+            label: str(e.label, 120) || 'Ending',
+            description: str(e.description, 500),
+            winKind,
+          }
+          if (winKind === 'flags') {
+            const winFlags = Array.isArray(e.winFlags)
+              ? ((e.winFlags as unknown[]).filter((f): f is string => typeof f === 'string' && f.trim().length > 0).map((f) => f.trim().slice(0, 60)))
+              : []
+            if (winFlags.length === 0) return null
+            return { ...base, winKind, winFlags }
+          }
+          const winStage = typeof e.winStage === 'string' && STAGES.has(e.winStage) ? e.winStage : null
+          if (!winStage) return null
+          return { ...base, winKind, winStage }
+        })
+        .filter(Boolean)
+    : []
+  if (!premise || dayCount <= 0) return undefined
+  return { premise, dayCount, startDay, endings }
+}
+
 // ---- Characters ----
 
 app.get('/api/characters', (_req, res) => {
@@ -1145,6 +1184,7 @@ app.post('/api/worlds', (req, res) => {
     relationshipThresholds: normalizeRelationshipThresholds(req.body.relationshipThresholds),
     intimacyLevel: normalizeIntimacyLevel(req.body.intimacyLevel),
     triggers: normalizeTriggers(req.body.triggers),
+    campaign: normalizeCampaign(req.body.campaign),
     customIntimacyOptions: Array.isArray(req.body.customIntimacyOptions) ? req.body.customIntimacyOptions : undefined,
     createdAt: now,
     updatedAt: now,
@@ -1166,6 +1206,7 @@ app.put('/api/worlds/:id', (req, res) => {
   if ('customSceneFlags' in req.body) patch.customSceneFlags = normalizeCustomSceneFlags(req.body.customSceneFlags)
   if ('intimacyLevel' in req.body) patch.intimacyLevel = normalizeClearableIntimacyLevel(req.body.intimacyLevel)
   if ('triggers' in req.body) patch.triggers = normalizeTriggers(req.body.triggers)
+  if ('campaign' in req.body) patch.campaign = normalizeCampaign(req.body.campaign)
   if ('customBackgrounds' in req.body) patch.customBackgrounds = normalizeCustomBackgrounds(req.body.customBackgrounds)
   if ('items' in req.body) {
     // Validate against whichever custom flags are in effect after this same request, so an item
