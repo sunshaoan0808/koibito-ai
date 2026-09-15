@@ -328,10 +328,11 @@ play."
       what you've learned about them (likes/goals discovered), milestones hit, memories pinned,
       next unlock and what it needs. `RelationshipPanel` is close but reads as a transactional
       control panel, not a keepsake. `src/components/chat/RelationshipPanel.tsx`.
-- [ ] **Jealousy / rivalry in group scenes** (Monster Prom; otome). Multi-character tracking exists
+- [x] **Jealousy / rivalry in group scenes** (Monster Prom; otome). Multi-character tracking exists
       (#118); "spending an evening with one in front of another" tension does not. A light rapport
       penalty + a `jealousy` flag already in `SCENE_FLAGS` that isn't mechanically wired.
       `src/lib/dating/stage.ts`, `useChatSession.ts` (`updateAffectionFromReply`).
+      **✅ 已落（2026-09-15，A 方案：在场其他人 +2 tension）**：纯核 `dating/jealousy.ts`（`jealousyTensionNudge`：本回合置 flag＋有见证人才 +2，否则 0，6 用例 ✓）→ `updateAffectionFromReply` 两条置位路全接（classifier `newFlags` 走 deltas 折叠、trigger `set_flag` 直加 `nextStats.tension`，同回合只加一次；见证人复用 judge 已见的 `presentParticipants` 名单，提示词与数值不打架）→ 说话人自轨 tension＋clamp＋risk 全走既有下游 ✓。验证：三套 tsc 绿＋全量 2701 全过＋门禁绿 ✓
 - [ ] **Route / campaign structure (bigger).** Mystic Messenger's 11-day arc with a goal and a
       deadline. A world could carry an optional `campaign` — a premise, a day count, a win
       condition (reach a stage, hit N flags) — giving a run a shape and an ending beyond "keep
