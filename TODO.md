@@ -462,7 +462,8 @@ play."
 
 ## Tier 6 — Smaller polish
 
-- [ ] Sprite/CG: a subtle "focus" scene-dim while the composer is focused (draws the eye to input).
+- [x] Sprite/CG: a subtle "focus" scene-dim while the composer is focused (draws the eye to input).
+      **✅ 已落（2026-09-15，3 文件 +18 行零删除）**：`Composer.tsx` 新增可选 `onFocusChange`（textarea 接 `onFocus`/`onBlur` 回报）→ `ChatWindow.tsx` 新增 `composerFocused` state（`composerNode` 直传 setter，`chatId` 切换复位）→ `VNStage.tsx` 新增可选 `composerFocused` prop，backdrop 与 chrome 间加 `z-[5]` 遮罩（`bg-black/45` + `transition-opacity`，`pointer-events-none` + `aria-hidden`）。验证：三套 `tsc` 全绿 + `npm test` 2685 全过 + 门禁绿 ✓
       **465 侦察＋定案（2026-09-14）**：⚠️ `VNStage` **完全不知道 composer 是否聚焦** ✗（grep 无任何
       focus 相关 ✓）→ 需要**从父组件新增一个 prop** ✓＋条件类 ✓（2 文件、约 3-4 片 ✗）。
       好消息：**暗化写法已有现成惯用法** ✓ —— `VNStage.tsx:179-180` 的
