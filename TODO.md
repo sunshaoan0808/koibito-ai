@@ -478,6 +478,9 @@ play."
       ② 符合 VN 惯例（先铺场景、后进对白 ✓）；③ 世界未填时行为**逐字节不变** ✓（KISS/YAGNI ✓）。
       落地：`WorldCard.openingLine?: string` ✓ → 世界编辑器一处输入框 ✓ → `createChat` 在 greeting 之前
       插一条系统/旁白行 ✓（复用 ④ 的路径 ✓）。
+      **✅ 已落（2026-09-14, `f7a12ae` 类型+消费端、`WorldsView.tsx` 作者输入框）**：三层齐 ✓ ——
+      `WorldCard.openingLine` ✓ → `createChat` 以 `role:'system'` 前置播出 ✓ → 世界编辑器「Opening line」输入框 ✓。
+      未自动验证：给某世界填一行 → 新聊天应先播它、再进 greeting ✓（需人工点一次 ✓）。
       guessed. Overlaps with the Tier 1 default-background item.
 - [ ] Persona ↔ character "compatibility" nudge (Persona same-arcana bonus) — persona interests
       matching a character's `likes` gives a small warmth modifier.

@@ -243,6 +243,8 @@ function WorldEditor({
   const [customBackgrounds, setCustomBackgrounds] = useState<CustomBackground[]>(base.customBackgrounds ?? [])
   /** The opening shot VN mode falls back to whenever a scene has no valid tag of its own. */
   const [defaultBackgroundId, setDefaultBackgroundId] = useState<string | undefined>(base.defaultBackgroundId)
+  /** 466: scene-setting line played before the character's greeting in a fresh chat. */
+  const [openingLine, setOpeningLine] = useState<string | undefined>(base.openingLine)
   const [newBackgroundLabel, setNewBackgroundLabel] = useState('')
   const [music, setMusic] = useState<Record<string, string>>(base.music ?? {})
   const [gifts, setGifts] = useState<GiftItem[]>(base.gifts ?? [])
@@ -299,6 +301,7 @@ function WorldEditor({
       // `null`, not `undefined` — see the `intimacyLevel` comment below on why a cleared nullable
       // field has to be sent explicitly rather than just omitted.
       defaultBackgroundId: defaultBackgroundId ?? null,
+      openingLine: openingLine ?? null,
       music,
       gifts,
       items,
@@ -589,6 +592,12 @@ function WorldEditor({
             </label>
             <div className="flex-1">
               <TextField label="Name" value={name} onChange={(e) => setName(e.target.value)} />
+              <TextField
+                label="Opening line"
+                hint="Scene-setting line played before the main character's greeting in a fresh chat. Leave empty for none."
+                value={openingLine ?? ''}
+                onChange={(e) => setOpeningLine(e.target.value || undefined)}
+              />
             </div>
           </div>
 
