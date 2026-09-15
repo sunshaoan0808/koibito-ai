@@ -589,6 +589,7 @@ app.post('/api/personas', (req, res) => {
     id,
     name: req.body.name,
     description: req.body.description,
+    interests: normalizeStringArray(req.body.interests),
     avatarDataUrl,
     createdAt: Date.now(),
   })
@@ -601,6 +602,7 @@ app.put('/api/personas/:id', (req, res) => {
   const patch: Record<string, unknown> = {}
   if ('name' in req.body) patch.name = req.body.name
   if ('description' in req.body) patch.description = req.body.description
+  if ('interests' in req.body) patch.interests = normalizeStringArray(req.body.interests)
   if ('avatarDataUrl' in req.body) patch.avatarDataUrl = resolveAvatar('personas', id, req.body.avatarDataUrl)
   const updated = personaStore.update(id, patch)
   res.json(updated)

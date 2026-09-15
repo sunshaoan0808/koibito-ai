@@ -74,14 +74,17 @@ export function PersonasView() {
 function PersonaEditor({ persona, onDone }: { persona: Persona | null; onDone: () => void }) {
   const [name, setName] = useState(persona?.name ?? '')
   const [description, setDescription] = useState(persona?.description ?? '')
+  const [interests, setInterests] = useState((persona?.interests ?? []).join(', '))
   const [avatarDataUrl, setAvatarDataUrl] = useState(persona?.avatarDataUrl)
   const [saving, setSaving] = useState(false)
 
   const save = async () => {
     setSaving(true)
     try {
-      if (persona) await personasApi.update(persona.id, { name, description, avatarDataUrl })
-      else await personasApi.create({ name, description, avatarDataUrl })
+      const parsed = interests.split(',').map((v) => v.trim()).filter(Boolean)
+      const payload = { name, description, interests: parsed.length ? parsed : undefined, avatarDataUrl }
+      if (persona) await personasApi.update(persona.id, payload)
+      else await personasApi.create(payload)
     } catch (e) {
       toastError(errorMessage(e))
       return
@@ -155,6 +158,13 @@ function PersonaEditor({ persona, onDone }: { persona: Persona | null; onDone: (
         rows={6}
         value={description}
         onChange={(e) => setDescription(e.target.value)}
+      />
+      <TextField
+        label="Interests"
+        hint="Comma-separated hobbies. Shared ones with a character give a small starting-affection bonus."
+        value={interests}
+        onChange={(e) => setInterests(e.target.value)}
+        placeholder="late-night gaming, quiet mornings"
       />
     </EditorShell>
   )

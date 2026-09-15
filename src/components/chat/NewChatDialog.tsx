@@ -28,6 +28,7 @@ export function NewChatDialog({
   const [personaId, setPersonaId] = useState<string>('')
   const [personaName, setPersonaName] = useState('')
   const [personaDescription, setPersonaDescription] = useState('')
+  const [personaInterests, setPersonaInterests] = useState('')
   const [greetingIndex, setGreetingIndex] = useState(0)
   const [slotValues, setSlotValues] = useState<Record<string, string>>({})
   const [starterId, setStarterId] = useState<string>('')
@@ -82,6 +83,9 @@ export function NewChatDialog({
       persona = await personasApi.create({
         name: personaName.trim(),
         description: personaDescription.trim(),
+        interests: personaInterests.trim()
+          ? personaInterests.split(',').map((v: string) => v.trim()).filter(Boolean)
+          : undefined,
       })
       resolvedPersonaId = persona.id
     }
@@ -90,6 +94,7 @@ export function NewChatDialog({
       world,
       personaId: resolvedPersonaId || '',
       personaName: persona?.name,
+      personaInterests: persona?.interests,
       participantIds,
       startingAffection: starter?.startingAffection ?? 0,
       summary: starter?.blurb || undefined,
@@ -190,6 +195,12 @@ export function NewChatDialog({
               value={personaDescription}
               onChange={(e) => setPersonaDescription(e.target.value)}
               placeholder={t("A line about who you are (optional)")}
+              className="mb-2 w-full rounded-xl bg-bg-sunken px-3 py-2.5 text-base text-text outline-none ring-1 ring-transparent transition-shadow focus:ring-accent/40 sm:py-2 sm:text-sm"
+            />
+            <input
+              value={personaInterests}
+              onChange={(e) => setPersonaInterests(e.target.value)}
+              placeholder={t("Interests, comma-separated (optional)")}
               className="w-full rounded-xl bg-bg-sunken px-3 py-2.5 text-base text-text outline-none ring-1 ring-transparent transition-shadow focus:ring-accent/40 sm:py-2 sm:text-sm"
             />
             <p className="mt-1.5 text-[11px] text-text-muted">

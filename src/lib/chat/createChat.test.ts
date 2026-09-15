@@ -159,3 +159,41 @@ describe('availableGreetings', () => {
     expect(availableGreetings(character())).toEqual([])
   })
 })
+
+describe('createChat: 468 compatibility nudge', () => {
+  it('adds +1 affection per shared persona/character interest (cap +3)', async () => {
+    const c = character()
+    c.likes = ['late-night gaming', 'quiet mornings', 'chess', 'surfing']
+    await createChat({
+      character: c,
+      world: undefined,
+      personaId: '',
+      personaInterests: ['Late-Night Gaming', 'Quiet Mornings', 'Chess', 'Skydiving'],
+      startingAffection: 10,
+    })
+    const payload = lastCreatePayload() as unknown as { affection: number }
+    expect(payload.affection).toBe(13)
+  })
+
+  it('leaves affection untouched with no overlap and clamps at 100', async () => {
+    const c = character()
+    c.likes = ['surfing']
+    await createChat({
+      character: c,
+      world: undefined,
+      personaId: '',
+      personaInterests: ['chess'],
+      startingAffection: 5,
+    })
+    expect((lastCreatePayload() as unknown as { affection: number }).affection).toBe(5)
+
+    await createChat({
+      character: c,
+      world: undefined,
+      personaId: '',
+      personaInterests: ['surfing'],
+      startingAffection: 100,
+    })
+    expect((lastCreatePayload() as unknown as { affection: number }).affection).toBe(100)
+  })
+})

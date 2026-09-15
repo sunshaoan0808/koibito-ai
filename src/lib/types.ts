@@ -27,6 +27,8 @@ export interface Persona {
   id: string
   name: string
   description: string
+  /** Free-text interests/hobbies — matched against `Character.likes` for the 468 compatibility nudge. */
+  interests?: string[]
   avatarDataUrl?: string
   createdAt: number
 }

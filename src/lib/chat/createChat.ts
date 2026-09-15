@@ -3,6 +3,7 @@ import { fillTemplate } from './sceneSlots'
 import type { ChatBackend } from '@/lib/api/chatBackend'
 import type { Character } from '@/lib/characters/cardSpec'
 import { substituteMacros } from '@/lib/characters/macros'
+import { applyCompatibilityBonus } from '@/lib/dating/compatibility'
 import { computeWarmth, getRelationshipStats, relationshipMilestonesFor, relationshipStageForWarmth } from '@/lib/dating/stage'
 import { defaultGiftInventory } from '@/lib/dating/gifts'
 import { assistOverridesForTemplate, normalizeWorldTemplateId, type WorldTemplateId } from '@/lib/world/worldTemplates'
@@ -33,6 +34,8 @@ export interface CreateChatOptions {
   world: WorldCard | undefined
   personaId: string
   personaName?: string
+  /** 468: the persona's free-text interests — matched against `Character.likes` for the compatibility nudge. */
+  personaInterests?: string[]
   participantIds?: string[]
   startingAffection?: number
   summary?: string
@@ -56,15 +59,18 @@ export interface CreateChatOptions {
  * two independently-maintained copies.
  */
 export async function createChat(opts: CreateChatOptions): Promise<Chat> {
-  const { character, world, personaId, personaName, participantIds, startingAffection = 0, summary, greetingIndex = 0, client, mode } = opts
+  const { character, world, personaId, personaName, personaInterests, participantIds, startingAffection = 0, summary, greetingIndex = 0, client, mode } = opts
+
+  // 468: shared persona/character interests nudge the opening closeness (+1 each, cap +3, clamped 0-100).
+  const effectiveAffection = applyCompatibilityBonus(startingAffection, personaInterests, character.likes).affection
 
   // A starter describes existing closeness, not built-up conflict or a curiosity spike, so it only
   // seeds the four warmth-composing dimensions — curiosity/tension stay at a neutral 0.
   const startingStats: Partial<Record<RelationshipDimension, number>> | undefined =
-    startingAffection > 0
-      ? { trust: startingAffection, chemistry: startingAffection, comfort: startingAffection, respect: startingAffection }
+    effectiveAffection > 0
+      ? { trust: effectiveAffection, chemistry: effectiveAffection, comfort: effectiveAffection, respect: effectiveAffection }
       : undefined
-  const warmth = computeWarmth(startingAffection, getRelationshipStats({ relationshipStats: startingStats }))
+  const warmth = computeWarmth(effectiveAffection, getRelationshipStats({ relationshipStats: startingStats }))
   // Normalizes here (not just at read time) so a chat created against a world still carrying a
   // retired template id (e.g. old data with 'slice_of_life') writes the canonical replacement
   // going forward, rather than perpetuating a value the picker no longer offers.
@@ -75,7 +81,7 @@ export async function createChat(opts: CreateChatOptions): Promise<Chat> {
     participants: participantIds?.length ? participantIds : undefined,
     personaId,
     title: character.card.name,
-    affection: startingAffection,
+    affection: effectiveAffection,
     relationshipStats: startingStats,
     relationshipStage: relationshipStageForWarmth(warmth, relationshipMilestonesFor(world?.relationshipThresholds)),
     sceneFlags: [],
@@ -115,7 +121,7 @@ export async function createChat(opts: CreateChatOptions): Promise<Chat> {
     const hasCustomArt =
       Object.values(world?.backgrounds ?? {}).some(Boolean) || Object.keys(character.sprites ?? {}).length > 0
     const greetingText = rendered[activeSwipe]
-    const backgroundIds = getUnlockedBackgroundIds(world, startingAffection)
+    const backgroundIds = getUnlockedBackgroundIds(world, effectiveAffection)
     // Free, deterministic and always available, unlike the model pass below — matches the greeting
     // text against background labels/ids so a scene tag exists even with no client connected at all.
     const keywordGuess = (): SceneTag | null => {
@@ -144,7 +150,7 @@ export async function createChat(opts: CreateChatOptions): Promise<Chat> {
     if (client && hasCustomArt) {
       detectGreetingScene(client, {
         text: greetingText,
-        expressionIds: getUnlockedExpressionIds(character, startingAffection),
+        expressionIds: getUnlockedExpressionIds(character, effectiveAffection),
         backgroundIds,
       })
         .then((scene) => {

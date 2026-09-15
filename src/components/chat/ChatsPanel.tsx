@@ -3,7 +3,7 @@ import { Copy, GitFork, MessageSquarePlus, MoreHorizontal, PanelLeftClose, Panel
 import { useApiQuery } from '@/lib/hooks/useApiQuery'
 import { allTags, filterChatsByTag } from '@/lib/chat/tags'
 import { ChatTagBar } from '@/components/chat/ChatTagBar'
-import { charactersApi, chatsApi, worldsApi } from '@/lib/api/client'
+import { charactersApi, chatsApi, personasApi, worldsApi } from '@/lib/api/client'
 import { useChatBackendClient } from '@/lib/hooks/useChatBackendClient'
 import { createChat } from '@/lib/chat/createChat'
 import { getCurrentActivity, presenceLabel } from '@/lib/world/calendar'
@@ -120,7 +120,9 @@ export function ChatsPanel({
     setBusyId(chat.id)
     try {
       const world = worlds.find((w) => w.id === character.worldId)
-      const fresh = await createChat({ character, world, personaId: chat.personaId, mode: chat.mode, client })
+      // 468: same persona, same nudge — resolve interests so the quick path matches NewChatDialog.
+      const personaInterests = chat.personaId ? (await personasApi.get(chat.personaId))?.interests : undefined
+      const fresh = await createChat({ character, world, personaId: chat.personaId, personaInterests, mode: chat.mode, client })
       onSelect(fresh.id)
     } catch (e) {
       toastError(errorMessage(e))

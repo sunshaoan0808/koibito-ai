@@ -324,6 +324,8 @@ export const ZH: Record<string, string> = {
   'Chatting as': '以谁的身份聊天',
   'Your name (optional)': '你的名字（可选）',
   'A line about who you are (optional)': '一句话介绍你自己（可选）',
+  'Interests, comma-separated (optional)': '兴趣爱好，逗号分隔（可选）',
+  'Interests': '兴趣爱好',
   'Persona': '身份',
   'Default (You)': '默认（你）',
   'How you know each other': '你们如何相识',
