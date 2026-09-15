@@ -357,9 +357,10 @@ play."
       改 async 并 `await resolveAssetMap(...)` 后传入 ✓。**落地时踩实的陷阱**：epub 的文本段靠
       `escapeXml(...).replace(/\r\n|\r|\n/g,'<br/>')` 保留换行，而 `inlineAssetsHtml` 的 `escape` 是
       注入的 → 必须传"既转义又还原 `<br/>`"的闭包，否则**全书换行消失** ✓（epub 既有 22 用例守住了这条 ✓）。
-      - [ ] **Do / Say / Narrate input modes** (AI Dungeon). A composer mode chip that folds a light
+      - [x] **Do / Say / Narrate input modes** (AI Dungeon). A composer mode chip that folds a light
       prefix hint into the turn — reduces ambiguity for a new user typing plain text. ROADMAP §15.
       `src/components/chat/Composer.tsx`, `src/lib/prompt/builder.ts` (`renderTurn`).
+      **✅ 已落（2026-09-14，`da45c35`＋`79610c3`，2026-09-15 已验证）**：`wrapAction`（`*…*` 包裹、已包裹不重复包）＋`actionMode` 二态＋发送时包裹＋发送后复位；**Narrate 未单列是刻意的** —— 本仓既有约定 `*…*`＝动作/叙述、`builder.test.ts:50` 守门（无模式逐字符如旧，57 用例绿 ✓）
 - [x] **Scenario templates with fill-in-the-blank placeholders** (AI Dungeon scenarios). A reusable
       start package (world + character(s) + opening premise + persona nudge) that asks the player a
       couple of short questions on start and substitutes the answers into the opening. Mad-libs
@@ -370,15 +371,17 @@ play."
       §12). A full-state snapshot (relationship, inventory, calendar, flags) a player returns to —
       VN players expect this and forking isn't the same mental model.
       `server/app.ts` (a snapshot table), a `SaveSlotsPanel`.
-- [ ] **Chat folders / tags** (SillyTavern; AI Dungeon "adventures"). ROADMAP §14 open; its own
+- [x] **Chat folders / tags** (SillyTavern; AI Dungeon "adventures"). ROADMAP §14 open; its own
       authoring surface, not a row-menu addition. `src/components/chat/ChatsPanel.tsx`, `types.ts`.
+      **✅ 已落（数据层 `41bdbcb`＋标签条 `a7957ee`＋文件夹分组 2026-09-15 已验证）**：`Chat.tags?`（类型＋服务端整行 blob 零迁移透传）＋纯核 `lib/chat/tags.ts`（normalize/allTags/filter，6 用例 ✓）＋`ChatTagBar`（过滤 chips＋`+` 打标签）＋`ChatsPanel` 文件夹行（`tagsAsFolders` 开关开时 `All (n)`＋`/tag (n)`，照抄 `CharacterList`，文件夹即过滤器、无第二过滤态） ✓
 - [x] **Story-branch tree view** (ROADMAP §12). Forking works; there's no visualization of a chat's
       branch history. Closer to a save-tree browser than the flat list-with-badges.
-- [ ] **Combinatorial character creation** (AI Dungeon character creator; partly seeded by the
+- [x] **Combinatorial character creation** (AI Dungeon character creator; partly seeded by the
       trait-picker in commit `485fc67`). A third "New character" path: pick from small independent
       trait lists (archetype / occupation / quirk / relationship-to-player) and have the model
       assemble the card. `src/components/characters/GenerateCharacterDialog.tsx`,
       `src/lib/characters/traitPresets.ts`.
+      **✅ 已落（上游 `c3d061e` 自带＋`373a8ad` 访谈接线，2026-09-15 已验证）**：`traits` 模式四轴（archetype/occupation/quirk/relationshipStarter）＋模型现生选项池（`generateTraitOptions`，非固定列表）＋点选/重随/`composeTraitBrief` 组 brief＋`draftCharacterFromBrief` 组卡；行内 `485fc67` 在本仓查无（上游行号已失效，属漏勾非缺件） ✓
 - [ ] **User-authored scripting, Output hook first** (AI Dungeon; RisuAI CBS). Pure
       `(text, state) => { text, state }` run after generation, sandboxed (Web Worker, no fetch/DOM),
       with a test panel. Regex scripts are already the stateless special case of this. ROADMAP §15 —
