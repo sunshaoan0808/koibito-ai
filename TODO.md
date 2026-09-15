@@ -467,6 +467,11 @@ play."
       focus 相关 ✓）→ 需要**从父组件新增一个 prop** ✓＋条件类 ✓（2 文件、约 3-4 片 ✗）。
       好消息：**暗化写法已有现成惯用法** ✓ —— `VNStage.tsx:179-180` 的
       `[filter:brightness(0.5)_saturate(0.72)]` ＋ `transition-[filter]` ✓，**照抄即可** ✓（别自创 ✗）。
+      **⚠️ 465 二次侦察（2026-09-14）**：我原先估的"2 文件"**是错的** ✗✗ —— `ChatWindow.tsx` **完全没有**聚焦
+      状态（grep `composerFocused|isFocused|onFocus` 零命中 ✗），`VNStageProps` 也无此 prop ✓ →
+      真实链路是 **`Composer.tsx` → `ChatWindow.tsx` → `VNStage.tsx`（3 文件）** ✗✗。
+      **可行的单文件子集** ✓：`vnInputMode: 'inline'` 时**输入框就在 VNStage 内部** ✓（见文件头注释 ✓）
+      → 可先只做"**inline 模式聚焦 → 暗化**" ✓（VNStage 单文件 ✓，1-2 片 ✓）；父 composer 那条留待后续 ✓。
 - [ ] `WorldCard` "opening line/scene" author field so a fresh chat's first screen is directed, not
       **466 侦察（2026-09-14）**：① 类型在 `src/lib/types.ts:525` `WorldCard` ✓ —— ⚠️ **"开场镜头"那半已存在**：
       `:542-545` 的 **`defaultBackgroundId`** ✓（注释明写"VN 永不落在空占位渐变上" ✓）→ 466 真缺的是**文字侧开场** ✗；
