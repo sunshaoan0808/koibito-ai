@@ -39,6 +39,7 @@ import {
   violatedExpectationTexts,
 } from '@/lib/dating/expectations'
 import { repeatedIntentNudge, trailingIntentRun } from '@/lib/dating/intent'
+import { JEALOUSY_TENSION_NUDGE, jealousyTensionNudge } from '@/lib/dating/jealousy'
 import { isRebuffActive, rebuffGuidance, type RecentRebuff } from '@/lib/dating/rebuff'
 import {
   advanceIntimacyScene,
@@ -1478,6 +1479,19 @@ export function useChatSession(chatId: string | null) {
       const repairResult = applyRepair(realismBefore, repairSincere)
       deltas.trust += promiseResult.trustDelta + repairResult.trustDelta
       deltas.affection += promiseResult.affectionDelta
+      // 331: witnesses for a jealousy beat reuse the exact `presentParticipants` list the judge
+      // already saw, so prompt and numbers can't disagree about who was in the room. Hoisted
+      // (not inlined) because the trigger `set_flag` path below needs the same list.
+      const jealousyWitnesses = [...(character ? [character] : []), ...participantCharacters]
+        .filter((c) => c.id !== speaker.id)
+        .map((c) => c.card.name)
+      // 331: a jealousy beat that lands in front of witnesses adds a light +2 tension on the
+      // speaker's own track — folded here (before clamping) so the downstream merge (clamps,
+      // risk, stage) treats it like any other tension movement.
+      deltas.tension += jealousyTensionNudge({
+        jealousySetThisTurn: (newFlags as string[]).includes('jealousy'),
+        witnessNames: jealousyWitnesses,
+      })
       // Two-speed bond: the long-term layer creeps at ~1/8 of the raw warmth movement.
       const bondLongTerm = nextBondLongTerm(realismBefore.bondLongTerm, warmthDeltaOf(rawDeltas))
       // Seven needs: deterministic decay every char reply (judge-driven scene feeding comes later).
@@ -1592,8 +1606,19 @@ export function useChatSession(chatId: string | null) {
         // start_scene and ignores the rest, rather than one clobbering the other's activeEvent.
         let sceneStarted = false
         for (const action of triggerResult.actions) {
-          if (action.kind === 'set_flag') existingFlags.add(action.flag)
-          else if (action.kind === 'remember') {
+          if (action.kind === 'set_flag') {
+            existingFlags.add(action.flag)
+            // 331: an authored `set_flag: jealousy` is the second way the flag gets set (the
+            // first is the classifier's `newFlags`, already folded into `deltas` above). Same
+            // witnessed beat, same +2 — once per turn, so a turn where both fire doesn't double.
+            if (
+              action.flag === 'jealousy' &&
+              !(newFlags as string[]).includes('jealousy') &&
+              jealousyTensionNudge({ jealousySetThisTurn: true, witnessNames: jealousyWitnesses }) > 0
+            ) {
+              nextStats.tension = clampStat(nextStats.tension + JEALOUSY_TENSION_NUDGE)
+            }
+          } else if (action.kind === 'remember') {
             chatFactsApi.create({ chatId: chatIdForRelationship, text: action.text }).catch(() => {})
           } else if (action.kind === 'notify') toastInfo(action.text)
           else if (action.kind === 'social_reaction') {
