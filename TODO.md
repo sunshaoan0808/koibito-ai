@@ -384,10 +384,11 @@ play."
       assemble the card. `src/components/characters/GenerateCharacterDialog.tsx`,
       `src/lib/characters/traitPresets.ts`.
       **✅ 已落（上游 `c3d061e` 自带＋`373a8ad` 访谈接线，2026-09-15 已验证）**：`traits` 模式四轴（archetype/occupation/quirk/relationshipStarter）＋模型现生选项池（`generateTraitOptions`，非固定列表）＋点选/重随/`composeTraitBrief` 组 brief＋`draftCharacterFromBrief` 组卡；行内 `485fc67` 在本仓查无（上游行号已失效，属漏勾非缺件） ✓
-- [ ] **User-authored scripting, Output hook first** (AI Dungeon; RisuAI CBS). Pure
+- [x] **User-authored scripting, Output hook first** (AI Dungeon; RisuAI CBS). Pure
       `(text, state) => { text, state }` run after generation, sandboxed (Web Worker, no fetch/DOM),
       with a test panel. Regex scripts are already the stateless special case of this. ROADMAP §15 —
       big, needs a real sandbox answer; scope tightly.
+      **✅ 已落（2026-09-15，C 真 Worker 沙箱）**：纯核 `text/outputHook.ts`（静态门禁 `validateOutputHookScript` 拦 fetch/DOM/import/eval 等 16 类 token＋`new Function` 预编译查语法；`runOutputHook` 超时 2s 兜底原文＋`applyOutputHooks` 逐个跑挂了记错不停，15 用例 ✓）→ 真 Worker 入口 `outputHookWorker.ts`（独立 chunk `outputHookWorker-*.js`，`new Function` 在 worker 内编译、零应用模块导入）→ 类型 `OutputHookScript`＋store 持久化（`outputHooks`，rp-settings）→ 设置区 `OutputHooksSection`（ListEditor＋display/prompt/both＋真 Worker 测试面板）→ 接线 display 侧（`combined` clean 后/echo 检查前）＋prompt 侧（`recentHistory` 构造后、同文本缓存、state 快照两边一致）✓。验证：三套 tsc 绿＋全量 2733 全过＋构建绿（独立 chunk 出）＋CJK 净＋门禁绿 ✓
 - [x] **On-demand in-chat scene snapshot** (AI Dungeon "See"). A chat-level "snapshot this moment"
       that generates an image into the transcript (not a persistent slot), reusing the
       `ImageBackend` abstraction that already exists. ROADMAP §15.
