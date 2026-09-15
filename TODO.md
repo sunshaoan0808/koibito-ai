@@ -341,7 +341,7 @@ play."
 
 ## Tier 4 — Competitive parity & authoring
 
-- [ ] **RisuAI-style inline asset embeds** — `{{image::name}}` / character "sends a photo" mid-chat,
+- [x] **RisuAI-style inline asset embeds** — `{{image::name}}` / character "sends a photo" mid-chat,
       driven by triggers or regex. One of RisuAI's most-loved features and a natural fit here
       (triggers + regex + per-character assets all exist). Add `Character.assets` and a render pass
       in `MessageBubble` / `VNStage` / transcript export. `src/lib/characters/cardSpec.ts`,
@@ -360,11 +360,12 @@ play."
       - [ ] **Do / Say / Narrate input modes** (AI Dungeon). A composer mode chip that folds a light
       prefix hint into the turn — reduces ambiguity for a new user typing plain text. ROADMAP §15.
       `src/components/chat/Composer.tsx`, `src/lib/prompt/builder.ts` (`renderTurn`).
-- [ ] **Scenario templates with fill-in-the-blank placeholders** (AI Dungeon scenarios). A reusable
+- [x] **Scenario templates with fill-in-the-blank placeholders** (AI Dungeon scenarios). A reusable
       start package (world + character(s) + opening premise + persona nudge) that asks the player a
       couple of short questions on start and substitutes the answers into the opening. Mad-libs
       simple; turns "recreate the same opening for a new save" into picking a template. ROADMAP §15.
       Build on `starterTemplates.ts` + `WorldTemplateGallery.tsx` + `relationshipStarters`.
+      **✅ 已落（2026-09-14，④ `138056b`+`8dd4863`，2026-09-15 已验证）**：`sceneSlots.ts`（`slotsFrom`/`fillTemplate`）＋`createChat.slotValues` 代入开场白＋`NewChatDialog` 槽位输入框 ✓
 - [x] **Save slots / named state snapshots** distinct from chat history (Ren'Py save/load; ROADMAP
       §12). A full-state snapshot (relationship, inventory, calendar, flags) a player returns to —
       VN players expect this and forking isn't the same mental model.
@@ -477,7 +478,7 @@ play."
       `<textarea>/<input>`** ✓（它只收 `composerHasDraft` 这个 **prop** ✓，见 `:249` 注释 ✓）→ 输入框**始终在父层** ✗。
       ⇒ **465 就是 3 文件**（`Composer.tsx` 持输入 → `ChatWindow.tsx` 中转 → `VNStage.tsx` 消费 ✓），无捷径 ✗。
       暗化本身是 1 行 ✓：`z-[5]` 半透明遮罩，夹在 backdrop(`z-0`) 与 chrome(`z-10`) 之间 ✓（不改既有元素 ✓）。
-- [ ] `WorldCard` "opening line/scene" author field so a fresh chat's first screen is directed, not
+- [x] `WorldCard` "opening line/scene" author field so a fresh chat's first screen is directed, not
       **466 侦察（2026-09-14）**：① 类型在 `src/lib/types.ts:525` `WorldCard` ✓ —— ⚠️ **"开场镜头"那半已存在**：
       `:542-545` 的 **`defaultBackgroundId`** ✓（注释明写"VN 永不落在空占位渐变上" ✓）→ 466 真缺的是**文字侧开场** ✗；
       ② ⚠️ **与 ④ 语义重叠**：④ 刚把**角色 greeting** 做成可填空 ✓ → 世界的开场白**该先于/替换 greet ing 吗** ✗✗
@@ -495,11 +496,11 @@ play."
 - [x] Persona ↔ character "compatibility" nudge (Persona same-arcana bonus) — persona interests
       matching a character's `likes` gives a small warmth modifier.
       **✅ 已落（2026-09-15，A 方案：人设 `interests`＋开局小加成）**：`Persona.interests?: string[]`（类型＋服务端 POST/PUT 白名单 `normalizeStringArray`＋`PersonasView` 输入框＋新建对话内联输入框＋zh 词条）→ 纯核 `dating/compatibility.ts`（归一化＋`sharedInterests`＋`compatibilityBonus` 上限 +3＋`applyCompatibilityBonus` 0-100 clamp，8 用例 ✓）→ `createChat({personaInterests})` 开局 `affection` 加成（`NewChatDialog` 传所选人设兴趣、`ChatsPanel` 快捷入口同样解析；创建链 2 用例 ✓）。验证：三套 `tsc` 全绿＋全量 2695 全过＋门禁绿 ✓
-- [ ] Backlog drawer styled as a translucent VN log with per-speaker colors, not the plain
+- [x] Backlog drawer styled as a translucent VN log with per-speaker colors, not the plain
       `bg-bg/95` panel. `src/components/chat/VNStage.tsx` (`showLog` block), `MessageLog.tsx`.
       **✅ 已落（2026-09-14, `c830413`+`645f037`）**：per-speaker 色条**早已实现**（`MessageLog.tintSpeakers`
       ✓ 且 `VNStage:1012` 已在传 ✓）→ 只缺半透明 → 抽屉改 `bg-bg/80 backdrop-blur-sm` ✓（并去掉重复类 ✓）。
-- [ ] Expression-set generation from one reference image already exists (#125) — surface it more
+- [x] Expression-set generation from one reference image already exists (#125) — surface it more
       prominently in the empty VN state, alongside `vnArtHint`.
       **落刀点（2026-09-14 侦察核定）**：① `src/lib/vn/artHint.ts:27` 的 `vnArtHint()` 是**纯函数** →
       加"有立绘但无表情组"的提示分支（规则见 `src/lib/characters/portraitRun.ts` ✓，
@@ -525,8 +526,9 @@ play."
       `expressions` 取自 `@/lib/vn/expressions` ✓（VNStage 已引入 ✓）；`initialPrompt` =
       `portrait of ${card.name}, ${card.description}`.slice(0,300) ✓。渲染块**照抄** `:1039-1047`
       的 `vnHintIsWorldArt` 按钮 ✓（同款 className ✓）＋ `Modal` 挂载 ＋ 一个 `useState` ✓。
-- [ ] Gallery: a "music room" tab listing a world's uploaded BGM tracks (Ren'Py convention) — the
+- [x] Gallery: a "music room" tab listing a world's uploaded BGM tracks (Ren'Py convention) — the
       tracks already exist per-world. `src/components/gallery/GalleryView.tsx`.
+      **✅ 已落（`82860bc`，2026-09-15 已验证）**：`GalleryView` 已有 `art`/`music` 双 tab（`Music room` 文案 ✓，`listWorldTracks(worlds)` 取数 ✓）
 
 ---
 
