@@ -250,6 +250,8 @@ interface VNStageProps {
    *  didn't type themselves (an impersonation suggestion, a prefilled intimacy action), which would
    *  otherwise be composed somewhere they can't see. */
   composerHasDraft?: boolean
+  /** 465: composer focus state (reported by Composer via ChatWindow). Dims the scene to draw the eye to input. */
+  composerFocused?: boolean
   /** Off by default; the quick menu's Auto toggle. Once a reply finishes typing, waits a beat scaled
    *  to its length and calls `onAutoAdvanceFire` — real VN autoplay, so `ChatWindow` owns the actual
    *  "what to send" + safety-cap decision (never picks an AI-suggested choice, stops on a live date,
@@ -287,6 +289,7 @@ export function VNStage({
   assistSlot,
   composerSlot,
   composerHasDraft = false,
+  composerFocused = false,
   autoAdvance = false,
   onToggleAutoAdvance,
   onAutoAdvanceFire,
@@ -841,6 +844,11 @@ export function VNStage({
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: 'radial-gradient(ellipse 82% 68% at 50% 40%, transparent 58%, rgb(0 0 0 / 0.30) 100%)' }}
+      />
+      {/* 465: composer-focus scene dim — z-[5] sits between backdrop/sprites (z-0) and chrome (z-10). */}
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 z-[5] bg-black/45 transition-opacity duration-300 ${composerFocused ? 'opacity-100' : 'opacity-0'}`}
       />
       {showPetals && <SakuraPetals />}
 

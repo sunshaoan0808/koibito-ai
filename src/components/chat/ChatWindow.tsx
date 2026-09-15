@@ -257,6 +257,8 @@ export function ChatWindow({
   const [highlightedId, setHighlightedId] = useState<string | null>(null)
   const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [draft, setDraft] = useState('')
+  // 465: scene-dim while the composer is focused — Composer reports focus, VNStage consumes.
+  const [composerFocused, setComposerFocused] = useState(false)
   const [armedIntent, setArmedIntent] = useState<MessageIntent | null>(null)
   // Set when a Relationship-panel intimacy action populates the composer; carries the outfit/aftercare side effects into the next send.
   const [armedIntimacyOptionId, setArmedIntimacyOptionId] = useState<string | null>(null)
@@ -277,6 +279,7 @@ export function ChatWindow({
     setArmedIntent(null)
     setArmedIntimacyOptionId(null)
     setAutoAdvance(false)
+    setComposerFocused(false)
   }, [chatId])
 
   useEffect(() => {
@@ -790,6 +793,7 @@ export function ChatWindow({
         // Clearing the composer discards the armed intimacy action too.
         if (!v.trim()) setArmedIntimacyOptionId(null)
       }}
+      onFocusChange={setComposerFocused}
       disabled={!character}
       isGenerating={isGenerating}
       canContinue={canContinue}
@@ -1144,6 +1148,7 @@ export function ChatWindow({
           }
           composerSlot={composerNode('vn')}
           composerHasDraft={!!draft.trim()}
+          composerFocused={composerFocused}
           autoAdvance={autoAdvance}
           onToggleAutoAdvance={() => setAutoAdvance((v) => !v)}
           onAutoAdvanceFire={handleAutoAdvanceFire}

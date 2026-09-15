@@ -35,6 +35,8 @@ interface ComposerProps {
   variant?: 'default' | 'vn'
   /** VN inline input: fills the dialogue box's fixed height instead of hugging its content, so the box never resizes as the draft grows. */
   fillHeight?: boolean
+  /** Reports textarea focus so the parent can dim the scene while writing (465). */
+  onFocusChange?: (focused: boolean) => void
 }
 
 /** `*…*` is this app's action/narration markup — `messageText` renders it as `<em>` and the model
@@ -66,6 +68,7 @@ export function Composer({
   intentSlot,
   variant = 'default',
   fillHeight = false,
+  onFocusChange,
 }: ComposerProps) {
   const [attachments, setAttachments] = useState<PendingAttachment[]>([])
   const [composerError, setComposerError] = useState<string | null>(null)
@@ -303,6 +306,8 @@ export function Composer({
           ref={textRef}
           value={value}
           onChange={(e) => onChangeValue(e.target.value)}
+          onFocus={() => onFocusChange?.(true)}
+          onBlur={() => onFocusChange?.(false)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
