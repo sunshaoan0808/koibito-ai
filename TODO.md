@@ -472,6 +472,10 @@ play."
       真实链路是 **`Composer.tsx` → `ChatWindow.tsx` → `VNStage.tsx`（3 文件）** ✗✗。
       **可行的单文件子集** ✓：`vnInputMode: 'inline'` 时**输入框就在 VNStage 内部** ✓（见文件头注释 ✓）
       → 可先只做"**inline 模式聚焦 → 暗化**" ✓（VNStage 单文件 ✓，1-2 片 ✓）；父 composer 那条留待后续 ✓。
+      **⚠️ 465 三次侦察（2026-09-14）**：连"inline 单文件子集"**也不成立** ✗✗ —— `VNStage` 内**没有任何
+      `<textarea>/<input>`** ✓（它只收 `composerHasDraft` 这个 **prop** ✓，见 `:249` 注释 ✓）→ 输入框**始终在父层** ✗。
+      ⇒ **465 就是 3 文件**（`Composer.tsx` 持输入 → `ChatWindow.tsx` 中转 → `VNStage.tsx` 消费 ✓），无捷径 ✗。
+      暗化本身是 1 行 ✓：`z-[5]` 半透明遮罩，夹在 backdrop(`z-0`) 与 chrome(`z-10`) 之间 ✓（不改既有元素 ✓）。
 - [ ] `WorldCard` "opening line/scene" author field so a fresh chat's first screen is directed, not
       **466 侦察（2026-09-14）**：① 类型在 `src/lib/types.ts:525` `WorldCard` ✓ —— ⚠️ **"开场镜头"那半已存在**：
       `:542-545` 的 **`defaultBackgroundId`** ✓（注释明写"VN 永不落在空占位渐变上" ✓）→ 466 真缺的是**文字侧开场** ✗；
