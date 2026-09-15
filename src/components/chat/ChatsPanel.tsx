@@ -36,6 +36,13 @@ export function ChatsPanel({
   const chats = filterChatsByTag(sortedChats, tagFilter)
   // Chips come from the *unfiltered* set, so a chip never disappears the moment you click it.
   const tagsInUse = allTags(sortedChats)
+  // Tags-as-folders (mirrors `CharacterList`): the `tagsAsFolders` setting turns the tag
+  // chips into a folder row with per-folder counts. Folders ARE filters — picking one just
+  // sets `tagFilter`, so there is no second filter state to drift out of sync. Untagged
+  // chats live under "All" (no separate Untagged folder in v1).
+  const tagsAsFolders = useSettingsStore((s) => s.tagsAsFolders)
+  const folderCounts = new Map<string, number>()
+  for (const tag of tagsInUse) folderCounts.set(tag, filterChatsByTag(sortedChats, tag).length)
   const activeChat = sortedChats.find((c) => c.id === activeChatId) ?? null
   const characters = useApiQuery('characters', () => charactersApi.list(), []) ?? []
   const worlds = useApiQuery('worlds', () => worldsApi.list(), []) ?? []
@@ -240,7 +247,28 @@ export function ChatsPanel({
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto px-2 pb-2">
-        <ChatTagBar tagsInUse={tagsInUse} activeChat={activeChat} value={tagFilter} onChange={setTagFilter} />
+        {tagsAsFolders && tagsInUse.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 px-1 pb-1.5">
+            <button
+              type="button"
+              onClick={() => setTagFilter('')}
+              className={`rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${!tagFilter ? 'bg-accent/15 text-accent' : 'bg-bg-sunken text-text-muted hover:text-text'}`}
+            >
+              All ({sortedChats.length})
+            </button>
+            {tagsInUse.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setTagFilter(tagFilter === tag ? '' : tag)}
+                className={`rounded-full px-2.5 py-0.5 text-[11px] transition-colors ${tagFilter === tag ? 'bg-accent/15 text-accent' : 'bg-bg-sunken text-text-muted hover:text-text'}`}
+              >
+                <span className="font-mono">/</span> {tag} ({folderCounts.get(tag) ?? 0})
+              </button>
+            ))}
+          </div>
+        )}
+        <ChatTagBar tagsInUse={tagsAsFolders ? [] : tagsInUse} activeChat={activeChat} value={tagFilter} onChange={setTagFilter} />
         {chats.map((chat) => {
           const character = charFor(chat.characterId)
           const presence = presenceFor(character)
