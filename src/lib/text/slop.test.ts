@@ -15,6 +15,7 @@ import {
   measureDuplicateRate,
   PARROT_ECHO_MIN_LENGTH,
   PARROT_ECHO_THRESHOLD,
+  stripThinkBlocks,
   textSimilarity,
   trimToLastSentence,
 } from './slop'
@@ -486,5 +487,29 @@ describe('measureDuplicateRate — the baseline number', () => {
     expect(baselineDuplicates).toBe(0)
     expect(measureDuplicateRate(turns).duplicates).toBe(1)
     expect(measureDuplicateRate(turns).rate).toBeGreaterThan(baselineDuplicates / turns.length)
+  })
+})
+
+describe('stripThinkBlocks — leaked thinking removal', () => {
+  it('returns ordinary prose untouched', () => {
+    const text = '*She turns.* "Hi."'
+    expect(stripThinkBlocks(text)).toBe(text)
+  })
+
+  it('strips a MortalThink block and keeps the reply', () => {
+    expect(stripThinkBlocks('<MortalThink>\n好的,缪斯.\n</MortalThink>\n\n"你好。"')).toBe('\n\n"你好。"')
+  })
+
+  it('strips thinking/think blocks case-insensitively', () => {
+    expect(stripThinkBlocks('<THINKING>plan</THINKING>"Hi."')).toBe('"Hi."')
+    expect(stripThinkBlocks('<think>hmm</think> *She smiles.*')).toBe(' *She smiles.*')
+  })
+
+  it('drops an unclosed trailing block', () => {
+    expect(stripThinkBlocks('"Hi."\n<MortalThink>\ncut off')).toBe('"Hi."\n')
+  })
+
+  it('cleanModelOutput removes a leaked block end to end', () => {
+    expect(cleanModelOutput('<MortalThink>\n好的.\n</MortalThink>\n\n"你好。"')).toBe('"你好。"')
   })
 })

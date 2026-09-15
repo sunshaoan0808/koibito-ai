@@ -104,6 +104,29 @@ const LEADING_AFFIRMATION_RE =
 /** A markdown heading at the start of a line — RP prose has no headings. */
 const MD_HEADING_RE = /^[ \t]*#{1,6}[ \t]+/gm
 
+/**
+ * Leaked thinking blocks (Mortal-style ECoT / generic think tags): a model that was told to
+ * "think first, then write" sometimes emits the thinking part into the reply. These can never
+ * be legitimate character speech — strip the whole block, keep what follows. Unclosed trailing
+ * blocks are dropped with the tail (a cut-off think is not dialogue either).
+ */
+const THINK_BLOCK_RES: RegExp[] = [
+  /<MortalThink>[\s\S]*?(?:<\/MortalThink>|$)/gi,
+  /<thinking>[\s\S]*?(?:<\/thinking>|$)/gi,
+  /<think>[\s\S]*?(?:<\/think>|$)/gi,
+]
+
+/** Strips leaked thinking blocks — the hard counterpart to the Mortal preset's soft "never emit ECoT" rule. Pure. */
+export function stripThinkBlocks(text: string): string {
+  if (!text) return text
+  let out = text
+  for (const re of THINK_BLOCK_RES) {
+    re.lastIndex = 0
+    out = out.replace(re, '')
+  }
+  return out
+}
+
 /** Three or more blank lines collapse to one blank line. */
 const EXCESS_BLANKS_RE = /\n{3,}/g
 
@@ -375,7 +398,10 @@ export function trimToLastSentence(text: string, maxLossRatio = 0.35): string {
  */
 export function cleanModelOutput(text: string, opts: CleanModelOutputOptions = {}): string {
   if (!text) return text
-  let out = text
+  // Leaked thinking blocks (Mortal-style ECoT / generic think tags) go FIRST — before
+  // `normalizeRpMarkup` below strips every `<tag>` into bare text and the block boundaries
+  // become unfindable. A cut-off think is not dialogue either, so unclosed tails go too.
+  let out = stripThinkBlocks(text)
 
   if (opts.charName || opts.personaName) {
     out = truncateAtStrayTurnMarker(out, opts.charName ?? '', opts.personaName ?? '')
