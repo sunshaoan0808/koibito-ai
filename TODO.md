@@ -333,10 +333,11 @@ play."
       penalty + a `jealousy` flag already in `SCENE_FLAGS` that isn't mechanically wired.
       `src/lib/dating/stage.ts`, `useChatSession.ts` (`updateAffectionFromReply`).
       **✅ 已落（2026-09-15，A 方案：在场其他人 +2 tension）**：纯核 `dating/jealousy.ts`（`jealousyTensionNudge`：本回合置 flag＋有见证人才 +2，否则 0，6 用例 ✓）→ `updateAffectionFromReply` 两条置位路全接（classifier `newFlags` 走 deltas 折叠、trigger `set_flag` 直加 `nextStats.tension`，同回合只加一次；见证人复用 judge 已见的 `presentParticipants` 名单，提示词与数值不打架）→ 说话人自轨 tension＋clamp＋risk 全走既有下游 ✓。验证：三套 tsc 绿＋全量 2701 全过＋门禁绿 ✓
-- [ ] **Route / campaign structure (bigger).** Mystic Messenger's 11-day arc with a goal and a
+- [x] **Route / campaign structure (bigger).** Mystic Messenger's 11-day arc with a goal and a
       deadline. A world could carry an optional `campaign` — a premise, a day count, a win
       condition (reach a stage, hit N flags) — giving a run a shape and an ending beyond "keep
       chatting." Revisit after the day-planner loop exists.
+      **✅ 已落（2026-09-15，C 档大全套）**：纯核 `world/campaign.ts`（`CampaignDef` premise＋dayCount＋startDay＋有序多结局 stage/flag 胜利条件；`evaluateCampaign` 判 active/won/expired；`campaignProgress` 进度；`campaignPromptLine` 提示词行，15 用例 ✓）→ 类型 `WorldCard.campaign?`（unset＝老行为）→ 服务端 `normalizeCampaign`＋POST/PUT 全接 → WorldsView 独立 Campaign tab（`CampaignTabEditor.tsx`，endings 用 ListEditor 有序列表、flag 下拉复用 `combinedSceneFlags`；freeform 藏 tab）→ 接线 prompt 注入 premise＋剩余天数＋endings（`worldMomentLines`，无 campaign 空串）＋DayPlannerPanel 进度条＋won 🏆 结局横幅＋expired 提示 ✓。验证：三套 tsc 绿＋全量 2718 全过＋CJK 0 残渣＋门禁绿 ✓
 
 ---
 
