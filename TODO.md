@@ -492,8 +492,9 @@ play."
       `WorldCard.openingLine` ✓ → `createChat` 以 `role:'system'` 前置播出 ✓ → 世界编辑器「Opening line」输入框 ✓。
       未自动验证：给某世界填一行 → 新聊天应先播它、再进 greeting ✓（需人工点一次 ✓）。
       guessed. Overlaps with the Tier 1 default-background item.
-- [ ] Persona ↔ character "compatibility" nudge (Persona same-arcana bonus) — persona interests
+- [x] Persona ↔ character "compatibility" nudge (Persona same-arcana bonus) — persona interests
       matching a character's `likes` gives a small warmth modifier.
+      **✅ 已落（2026-09-15，A 方案：人设 `interests`＋开局小加成）**：`Persona.interests?: string[]`（类型＋服务端 POST/PUT 白名单 `normalizeStringArray`＋`PersonasView` 输入框＋新建对话内联输入框＋zh 词条）→ 纯核 `dating/compatibility.ts`（归一化＋`sharedInterests`＋`compatibilityBonus` 上限 +3＋`applyCompatibilityBonus` 0-100 clamp，8 用例 ✓）→ `createChat({personaInterests})` 开局 `affection` 加成（`NewChatDialog` 传所选人设兴趣、`ChatsPanel` 快捷入口同样解析；创建链 2 用例 ✓）。验证：三套 `tsc` 全绿＋全量 2695 全过＋门禁绿 ✓
 - [ ] Backlog drawer styled as a translucent VN log with per-speaker colors, not the plain
       `bg-bg/95` panel. `src/components/chat/VNStage.tsx` (`showLog` block), `MessageLog.tsx`.
       **✅ 已落（2026-09-14, `c830413`+`645f037`）**：per-speaker 色条**早已实现**（`MessageLog.tintSpeakers`
