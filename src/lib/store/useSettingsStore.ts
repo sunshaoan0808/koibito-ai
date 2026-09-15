@@ -11,7 +11,7 @@ import type { TtsProviderId } from '@/lib/voice/ttsProviders'
 import type { ChatBackendId } from '@/lib/api/chatBackend'
 import type { ImageBackendId } from '@/lib/api/imageBackend'
 import type { RelationshipDifficulty } from '@/lib/dating/relationshipAssist'
-import type { QuickReply, RegexScript } from '@/lib/types'
+import type { QuickReply, RegexScript, OutputHookScript } from '@/lib/types'
 import type { ThemePreset } from '@/lib/store/themePresets'
 import type { PromptSectionId } from '@/lib/prompt/builder'
 import { DEFAULT_PROMPT_SECTIONS } from '@/lib/prompt/builder'
@@ -265,6 +265,11 @@ interface SettingsState {
   regexScripts: RegexScript[]
   setRegexScripts: (scripts: RegexScript[]) => void
 
+  // user-authored output-hook scripts (TODO L387) — the stateful sibling of regexScripts,
+  // run after generation in a Web Worker. Same persist shape, same list idiom.
+  outputHooks: OutputHookScript[]
+  setOutputHooks: (scripts: OutputHookScript[]) => void
+
   // section 14's Quick Replies bar — a fixed row of user-configurable buttons above the composer
   quickReplies: QuickReply[]
   setQuickReplies: (replies: QuickReply[]) => void
@@ -492,6 +497,9 @@ export const useSettingsStore = create<SettingsState>()(
 
       regexScripts: [],
       setRegexScripts: (scripts) => set({ regexScripts: scripts }),
+
+      outputHooks: [],
+      setOutputHooks: (scripts) => set({ outputHooks: scripts }),
 
       quickReplies: DEFAULT_QUICK_REPLIES,
       setQuickReplies: (replies) => set({ quickReplies: replies }),

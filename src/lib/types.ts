@@ -260,6 +260,22 @@ export interface RegexScript {
   enabled: boolean
 }
 
+/**
+ * A user-authored Output-hook script (TODO L387; ROADMAP section 15). The stateful sibling of
+ * `RegexScript`: a `(text, state) => { text, state }` function BODY run after generation in a
+ * Web Worker with no fetch/DOM access. `display` rewrites only what's stored/shown; `prompt`
+ * rewrites only history text sent back to the model; `both` does each. Disabled or failing
+ * validation means never run — a hook can never blank a reply.
+ */
+export interface OutputHookScript {
+  id: string
+  name: string
+  /** The function body — `text` and read-only `state` are in scope, must return `{ text }`. */
+  body: string
+  target: 'display' | 'prompt' | 'both'
+  enabled: boolean
+}
+
 export type GiftRarity = 'common' | 'uncommon' | 'rare' | 'epic'
 
 export interface GiftItem {

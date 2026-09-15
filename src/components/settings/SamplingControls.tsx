@@ -20,6 +20,7 @@ import { Section } from '@/components/ui/Section'
 import { SettingsPage } from '@/components/ui/SettingsPage'
 import { SettingsEyebrow } from '@/components/ui/SettingsEyebrow'
 import { RegexScriptsSection } from './RegexScriptsSection'
+import { OutputHooksSection } from './OutputHooksSection'
 import { InstructTemplateSection } from './InstructTemplateSection'
 import { PromptSectionsSection } from './PromptSectionsSection'
 import { SystemPromptSection } from './SystemPromptSection'
@@ -267,6 +268,8 @@ export function SamplingControls() {
       )}
 
       <RegexScriptsSection />
+
+      <OutputHooksSection />
     </SettingsPage>
   )
 }

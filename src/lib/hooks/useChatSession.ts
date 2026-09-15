@@ -198,6 +198,7 @@ import {
   SLOP_SCAN_TURNS,
   trimToLastSentence,
 } from '@/lib/text/slop'
+import { applyOutputHooks, createOutputHookWorker, runOutputHook } from '@/lib/text/outputHook'
 import { substituteMacros } from '@/lib/characters/macros'
 import { normalizeRpMarkup } from '@/lib/text/messageSegments'
 import { replyMaxTokens, resolveReplyLength, usesActionMarkup } from '@/lib/characters/voice'
@@ -449,6 +450,8 @@ export function useChatSession(chatId: string | null) {
   const relationshipDifficulty = useSettingsStore((s) => s.relationshipDifficulty)
   const autoSuggestChoices = useSettingsStore((s) => s.autoSuggestChoices)
   const regexScripts = useSettingsStore((s) => s.regexScripts)
+  // User-authored output hooks (TODO L387) — read once per render like regexScripts above.
+  const outputHooks = useSettingsStore((s) => s.outputHooks)
   const globalVisualNovelMode = useSettingsStore((s) => s.visualNovelMode)
   const reducedAudio = useSettingsStore((s) => s.reducedAudio)
   const styleGuidanceNote = useSettingsStore((s) => s.styleGuidance)
@@ -1026,9 +1029,41 @@ export function useChatSession(chatId: string | null) {
       // Messages already folded into chat.summary are represented there, not sent verbatim.
       const cutoff = freshChat.summaryUpToTimestamp ?? 0
       const createdAtById = new Map(messages.map((m) => [m.id, m.createdAt]))
-      const recentHistory = cutoff
+      const recentHistoryBase = cutoff
         ? historyForPrompt.filter((m) => (createdAtById.get(m.id) ?? Infinity) > cutoff)
         : historyForPrompt
+      // User-authored output hooks, prompt side (TODO L387): `target: 'prompt'|'both'` hooks
+      // rewrite each history turn's text before rendering — the stateful sibling of the prompt
+      // regex pass in `renderTurn`. Runs here (not inside the sync builder) because hooks are
+      // async worker calls. Same `state` snapshot the display side gets after generation, so a
+      // hook behaves identically wherever it runs. No hooks / no prompt hooks = same array.
+      const promptHookState = {
+        affection: freshChat.affection ?? 0,
+        stage: freshChat.relationshipStage ?? 'near_strangers',
+        flags: [...(freshChat.sceneFlags ?? [])],
+        day: world?.currentDay ?? 0,
+        phaseIndex: world?.currentPhaseIndex ?? 0,
+      }
+      const promptHooks = (outputHooks ?? []).filter((s) => s.enabled && (s.target === 'prompt' || s.target === 'both'))
+      const hookCache = new Map<string, string>()
+      const recentHistory: typeof recentHistoryBase = []
+      for (const msg of recentHistoryBase) {
+        const cached = hookCache.get(msg.text)
+        if (cached !== undefined) {
+          recentHistory.push(cached === msg.text ? msg : { ...msg, text: cached })
+          continue
+        }
+        // Identical texts share one worker run — history repeats (echoes, refrains) shouldn't
+        // pay a worker round-trip each. `state` is turn-scoped, so the cache lives per build.
+        const { text: hooked } = await applyOutputHooks(
+          (script, text, state) => runOutputHook(createOutputHookWorker, script, text, state),
+          promptHooks,
+          msg.text,
+          promptHookState,
+        )
+        hookCache.set(msg.text, hooked)
+        recentHistory.push(hooked === msg.text ? msg : { ...msg, text: hooked })
+      }
 
       // Impersonating {{user}}'s line withholds every steer built for {{char}}'s reply; world/persona/history context and plain style rules still apply.
       const impersonating = !!opts?.impersonateAsUser
@@ -1260,6 +1295,7 @@ export function useChatSession(chatId: string | null) {
       globalPostHistory,
       globalSystemPrompt,
       messages,
+      outputHooks,
       persona,
       promptSections,
       regexScripts,
@@ -2790,6 +2826,28 @@ export function useChatSession(chatId: string | null) {
           const { text: extractedText, scene: parsedScene } = extractSceneTag(combinedRaw)
           // Scrubbed before storing so a tell doesn't get fed back and imitated next turn. `combinedRaw` keeps the raw original for the Prompt Inspector's toggle.
           combined = cleanModelOutput(extractedText, { charName: speaker.card.name, personaName: persona?.name || 'You' })
+          // User-authored output hooks, display side (TODO L387): `target: 'display'|'both'`
+          // hooks rewrite the fresh reply here — after cleaning (so hooks see final text, not
+          // scene tags or tells) but before the echo/duplicate checks below (so a hook that
+          // legitimately rewrites can't trip the parrot guard). Same `state` snapshot the
+          // prompt side uses. A failing hook keeps `combined` — it can never blank a reply.
+          // Runs every auto-continue round on that round's text; the persisted message below
+          // stores the final hooked text, so swipes/continue/trim all see the same string.
+          {
+            const { text: hooked } = await applyOutputHooks(
+              (script, text, state) => runOutputHook(createOutputHookWorker, script, text, state),
+              (outputHooks ?? []).filter((s) => s.enabled && (s.target === 'display' || s.target === 'both')),
+              combined,
+              {
+                affection: chat.affection ?? 0,
+                stage: chat.relationshipStage ?? 'near_strangers',
+                flags: [...(chat.sceneFlags ?? [])],
+                day: world?.currentDay ?? 0,
+                phaseIndex: world?.currentPhaseIndex ?? 0,
+              },
+            )
+            combined = hooked
+          }
           scene = sanitizeSceneTag(parsedScene, unlockedExpressions, unlockedBackgrounds, selectableOutfits)
           // Catches the model echoing recent history back as a "fresh" reply (tail-end repeat, concatenated turns, or a copy of the player's own line).
           const recentTextsForDuplicateCheck = historyForPrompt.slice(-6).map((m) => m.text)
@@ -3110,6 +3168,7 @@ export function useChatSession(chatId: string | null) {
       countTokens,
       detectAndMarkTasks,
       messages,
+      outputHooks,
       refineExpressionFromText,
       refineSceneWithVision,
       resolveSpeaker,
