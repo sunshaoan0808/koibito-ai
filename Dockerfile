@@ -3,7 +3,7 @@
 # the browser talks to those directly, so this image never needs to reach them.
 
 # --- build the client -------------------------------------------------------
-FROM node:24-slim AS build
+FROM node:24.22.1-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # --- runtime ---------------------------------------------------------------
-FROM node:24-slim AS runtime
+FROM node:24.22.1-slim AS runtime
 ENV NODE_ENV=production
 # Must bind all interfaces to be reachable through Docker's published port; see server/index.ts.
 ENV API_HOST=0.0.0.0
